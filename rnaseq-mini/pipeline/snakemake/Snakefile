@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import csv
+from pathlib import Path
+
+from utils.functions import (
+    ensure_directory,
+    read_contrasts,
+    read_samples,
+    sample_is_single_end,
+)
+from utils.schema import validate_config
+
+configfile: "config/params.yaml"
+
+validate_config(config)
+
+PROJECT_DIR = Path.cwd()
+LOG_DIR = Path(config["paths"]["logs"])
+ensure_directory(LOG_DIR)
+
+samples = read_samples(config["paths"]["samples"])
+SAMPLES = [row["sample"] for row in samples]
+SAMPLE_LOOKUP = {row["sample"]: row for row in samples}
+
+FASTQ_LOOKUP = {}
+for sample in SAMPLES:
+    row = SAMPLE_LOOKUP[sample]
+    fastqs = {"R1": row.get("fastq_1")}
+    if row.get("fastq_2"):
+        fastqs["R2"] = row.get("fastq_2")
+    FASTQ_LOOKUP[sample] = fastqs
+
+
+contrasts = read_contrasts(config["r"]["contrasts_file"])
+CONTRAST_LABELS = [f"{a}_vs_{b}" for a, b in contrasts]
+
+RESULTS_DIR = Path(config["paths"]["outdir"])
+QC_DIR = Path(config["paths"]["qc"])
+SALMON_DIR = Path(config["paths"]["salmon"])
+COUNTS_DIR = Path(config["paths"]["counts"])
+DE_DIR = Path(config["paths"]["de"])
+FGSEA_DIR = Path(config["paths"]["fgsea"])
+SALMON_INDEX_DIR = Path(config["reference"]["salmon_index"])
+TX2GENE = SALMON_INDEX_DIR / "tx2gene.tsv"
+DE_TABLE_PATHS = [DE_DIR / f"DE_{label}.tsv" for label in CONTRAST_LABELS]
+FGSEA_TABLE_PATHS = [FGSEA_DIR / f"fgsea_{label}.tsv" for label in CONTRAST_LABELS]
+DE_FIG_DIR = DE_DIR / "figures"
+FGSEA_FIG_DIR = FGSEA_DIR / "figures"
+REPORT_HTML = config["report"]["output_html"]
+
+for path in [RESULTS_DIR, QC_DIR, SALMON_DIR, COUNTS_DIR, DE_DIR, FGSEA_DIR, LOG_DIR]:
+    ensure_directory(path)
+
+QC_FASTQC_DIR = QC_DIR / "fastqc"
+QC_MULTIQC_DIR = QC_DIR / "multiqc"
+ensure_directory(QC_FASTQC_DIR)
+ensure_directory(QC_MULTIQC_DIR)
+
+ensure_directory(DE_FIG_DIR)
+ensure_directory(FGSEA_FIG_DIR)
+
+ensure_directory(LOG_DIR / "slurm")
+
+SEQUENCING_MODE = "single" if sample_is_single_end(config) else "paired"
+
+include: "rules/qc.smk"
+include: "rules/salmon.smk"
+include: "rules/tximport_de.smk"
+include: "rules/report.smk"
+
+rule all:
+    input:
+        REPORT_HTML,
+        expand(QC_DIR / "fastqc" / "{sample}_{read}_fastqc.zip", sample=SAMPLES, read=["R1", "R2"] if SEQUENCING_MODE == "paired" else ["R1"]),
+        QC_DIR / "multiqc" / "multiqc_report.html",
+        expand(SALMON_DIR / "{sample}" / "quant.sf", sample=SAMPLES),
+        COUNTS_DIR / "counts.tsv",
+        COUNTS_DIR / "tpm.tsv",
+        DE_DIR / "de_summary.tsv",
+        expand(DE_DIR / "DE_{label}.tsv", label=CONTRAST_LABELS),
+        FGSEA_DIR / "fgsea_summary.tsv"

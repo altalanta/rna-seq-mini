@@ -1,0 +1,100 @@
+---
+title: "`r params$params_yaml$report$title`"
+author: "`r params$params_yaml$report$author`"
+date: "`r format(Sys.Date())`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    theme: readable
+params:
+  params_yaml: NULL
+  results_dir: "results"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE)
+library(tidyverse)
+results_dir <- params$results_dir
+params_yaml <- params$params_yaml
+qc_dir <- file.path(results_dir, "qc")
+counts_dir <- file.path(results_dir, "counts")
+de_dir <- file.path(results_dir, "de")
+fgsea_dir <- file.path(results_dir, "fgsea")
+```
+
+# Overview
+
+```{r overview}
+tribble(
+  ~Project, params_yaml$project,
+  ~Engine, params_yaml$engine,
+  ~Samples, length(readr::read_tsv(params_yaml$paths$samples, show_col_types = FALSE)$sample),
+  ~Organism, params_yaml$organism,
+  ~Date, Sys.time()
+) %>% knitr::kable()
+```
+
+# Quality Control
+
+```{r qc}
+multiqc_path <- file.path(qc_dir, "multiqc", "multiqc_report.html")
+if (file.exists(multiqc_path)) {
+  cat(sprintf("MultiQC report available: <a href='%s'>Open report</a>", multiqc_path))
+} else {
+  cat("MultiQC report not found.")
+}
+```
+
+# Quantification
+
+```{r quant}
+counts_path <- file.path(counts_dir, "counts.tsv")
+tpm_path <- file.path(counts_dir, "tpm.tsv")
+if (file.exists(counts_path)) {
+  counts_tbl <- readr::read_tsv(counts_path, show_col_types = FALSE)
+  cat(sprintf("Total genes quantified: %s", nrow(counts_tbl)))
+}
+```
+
+# Differential Expression
+
+```{r de}
+de_summary_path <- file.path(de_dir, "de_summary.tsv")
+if (file.exists(de_summary_path)) {
+  de_summary <- readr::read_tsv(de_summary_path, show_col_types = FALSE)
+  knitr::kable(de_summary)
+  for (comp in de_summary$comparison) {
+    de_file <- file.path(de_dir, paste0("DE_", comp, ".tsv"))
+    if (file.exists(de_file)) {
+      top_genes <- readr::read_tsv(de_file, show_col_types = FALSE) %>%
+        filter(!is.na(padj)) %>%
+        arrange(padj) %>%
+        head(10) %>%
+        select(gene_id, log2FoldChange, padj)
+      cat(sprintf("## Top genes for %s\n", comp))
+      print(knitr::kable(top_genes, digits = 3))
+    }
+  }
+} else {
+  cat("DE summary not found.")
+}
+```
+
+# Pathway Analysis
+
+```{r fgsea}
+fgsea_summary_path <- file.path(fgsea_dir, "fgsea_summary.tsv")
+if (file.exists(fgsea_summary_path)) {
+  fgsea_summary <- readr::read_tsv(fgsea_summary_path, show_col_types = FALSE)
+  knitr::kable(head(fgsea_summary %>% arrange(padj), 10), digits = 3)
+} else {
+  cat("FGSEA results not found.")
+}
+```
+
+# Session Info
+
+```{r session}
+sessionInfo()
+```

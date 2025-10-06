@@ -1,0 +1,16 @@
+# Snakemake profile for local execution
+cores: 8
+use-conda: true
+latency-wait: 60
+printshellcmds: true
+rerun-incomplete: true
+keep-going: true
+restart-times: 1
+conda-prefix: .snakemake/conda
+default-resources:
+  mem_mb: 4000
+  disk_mb: 1000
+  runtime: 60
+set-threads:
+  salmon_quant: 4
+  fastqc: 2

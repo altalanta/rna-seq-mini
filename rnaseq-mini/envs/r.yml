@@ -1,0 +1,28 @@
+name: rnaseq-mini-r
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - r-base=4.3
+  - r-optparse
+  - r-tidyverse
+  - r-yaml
+  - r-data.table
+  - r-jsonlite
+  - r-ggplot2
+  - r-pheatmap
+  - r-patchwork
+  - bioconductor-deseq2
+  - bioconductor-tximport
+  - bioconductor-tximportdata
+  - bioconductor-annotationdbi
+  - bioconductor-org.hs.eg.db
+  - bioconductor-org.sc.sgd.db
+  - bioconductor-biomart
+  - bioconductor-fgsea
+  - bioconductor-apeglm
+  - bioconductor-ensembldb
+  - r-rmarkdown
+  - r-quarto
+  - pandoc

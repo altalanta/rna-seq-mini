@@ -1,0 +1,22 @@
+name: rnaseq-mini-base
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.11
+  - snakemake>=7
+  - nextflow>=24
+  - mamba
+  - pip
+  - ruff
+  - black
+  - yamllint
+  - pandas
+  - pyyaml
+  - rich
+  - click
+  - pytest
+  - pre-commit
+  - pip:
+      - snakemake-executor-plugin-slurm
