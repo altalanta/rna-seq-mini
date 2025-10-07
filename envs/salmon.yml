@@ -1,0 +1,10 @@
+name: rnaseq-mini-salmon
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - salmon>=1.10
+  - samtools
+  - seqkit
+  - pigz

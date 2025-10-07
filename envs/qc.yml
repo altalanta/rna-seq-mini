@@ -1,0 +1,9 @@
+name: rnaseq-mini-qc
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - fastqc
+  - multiqc
+  - pigz
