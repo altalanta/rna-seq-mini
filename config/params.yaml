@@ -9,7 +9,7 @@ reference:
   annotation_gtf: "references/yeast/annotation.gtf.gz"
   decoy_fasta: "references/yeast/decoys.fa.gz"
   salmon_index: "references/yeast/salmon_index"
-  auto_download: false  # Set to true to auto-download human/mouse refs if missing
+  auto_download: true  # Set to true to auto-download references if missing
 fastqc:
   extra: ""
 multiqc:

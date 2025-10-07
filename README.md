@@ -9,6 +9,52 @@ Dual-engine (Snakemake & Nextflow) RNA-seq workflow that performs QC, transcript
 - Reproducible environments via Conda/Mamba and optional Docker image
 - Turnkey execution on local machines or Slurm clusters with shared params file
 - CI smoke test exercises both engines using tiny synthetic reads
+- **Enhanced validation**: Cross-engine reproducibility checking with numerical validation
+- **Intelligent reference management**: Auto-download references for any species
+- **Advanced configuration**: Interactive wizards and comprehensive validation
+- **Resource-aware execution**: Automatic resource estimation and optimization
+- **Real-time monitoring**: Live progress tracking with quality metrics dashboard
+
+## Enhanced Features
+
+### 🔍 Cross-Engine Validation
+Ensure both Snakemake and Nextflow produce identical results:
+```bash
+make validate                    # Compare outputs between engines
+python scripts/validate_determinism.py  # Detailed validation report
+```
+
+### 📥 Intelligent Reference Management
+Auto-download references for any species:
+```bash
+python scripts/download_references.py --list    # List available species
+python scripts/download_references.py human     # Download human references
+make download-refs SPECIES=mouse               # Download with Makefile
+```
+
+### ⚙️ Advanced Configuration
+Interactive setup and comprehensive validation:
+```bash
+make wizard                    # Interactive configuration wizard
+make validate-full             # Comprehensive validation checks
+python scripts/validate_config.py --comprehensive  # Detailed validation
+```
+
+### 📊 Resource-Aware Execution
+Optimize resource allocation automatically:
+```bash
+make estimate                  # Show resource recommendations
+make optimize                  # Generate optimized configuration
+python scripts/estimate_resources.py --report-only  # Resource analysis only
+```
+
+### 📈 Real-Time Monitoring
+Track pipeline progress with live dashboard:
+```bash
+make monitor                   # Start real-time monitoring
+make monitor-once             # Show current status once
+python scripts/monitor_progress.py  # Custom monitoring options
+```
 
 ## Quickstart
 
@@ -67,6 +113,14 @@ All results land under `results/`:
 - `fgsea/` pathway tables and enrichment plots
 - `report.html` final analysis summary
 
+### Validation & Quality Control
+The enhanced validation system provides:
+- **Cross-engine reproducibility**: Ensures identical results between Snakemake and Nextflow
+- **Numerical validation**: Validates that statistical results are within tolerance
+- **Configuration validation**: Comprehensive checks for common setup errors
+- **Resource validation**: Ensures resource requirements match available hardware
+- **Progress monitoring**: Real-time tracking of pipeline execution and quality metrics
+
 ## Methods Summary
 1. **QC:** FastQC per FASTQ, aggregated by MultiQC.
 2. **Quantification:** Optional Salmon decoy index (`scripts/build_salmon_index.sh`), `salmon quant` with bias correction, stored per sample.
@@ -79,6 +133,26 @@ All results land under `results/`:
 - Modify `params.yaml` to change DE design (e.g., include covariates in the formula) or adjust fgsea gene sets and thresholds.
 - Add user-specific gene set files (GMT/TSV) and reference in `params.fgsea.genesets`.
 - Swap to containerized execution via `-with-docker rnaseq-mini` (Nextflow) or `--use-singularity` / `--use-apptainer` in Snakemake.
+- Add new species to `scripts/download_references.py` for automatic reference management.
+- Customize resource estimation in `scripts/estimate_resources.py` for specialized hardware.
+
+## Troubleshooting
+
+### Common Issues
+- **Configuration validation errors**: Run `make validate-full` to identify and fix issues
+- **Resource allocation problems**: Use `make estimate` to optimize resource settings
+- **Cross-engine differences**: Run `make validate` to ensure both engines produce identical results
+- **Missing references**: Use `make download-refs SPECIES=<organism>` to auto-download
+- **Pipeline monitoring**: Run `make monitor` to track progress in real-time
+
+### Performance Tips
+- Use `make optimize` to generate resource-optimized configuration
+- Monitor resource usage with `make monitor` during execution
+- For large datasets (>50 samples), consider HPC clusters with Slurm profiles
+- Enable `auto_download: true` in `config/params.yaml` for automatic reference management
 
 ## Continuous Integration
-GitHub Actions (`.github/workflows/ci.yml`) runs the `tests/run_smoke.sh` script in a matrix over Snakemake and Nextflow, ensuring both engines process the bundled yeast dataset end-to-end and emit the expected artifacts.
+- **Main CI** (`.github/workflows/ci.yml`): Runs smoke tests for both engines and enhanced validation
+- **Enhanced Validation** (`.github/workflows/enhanced_validation.yml`): Comprehensive testing of all new features
+
+Both workflows ensure cross-engine reproducibility, validate configurations, and test all enhanced features including reference management, resource estimation, and progress monitoring.
