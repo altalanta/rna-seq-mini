@@ -1,0 +1,19 @@
+# Snakemake profile for Slurm clusters
+jobs: 50
+use-conda: true
+latency-wait: 120
+keep-going: true
+restart-times: 2
+cluster: >-
+  sbatch
+  --job-name=smk.{rule}
+  --cpus-per-task={threads}
+  --mem={resources.mem_mb}
+  --time={resources.runtime}
+  --output=logs/slurm/{rule}.%j.out
+  --error=logs/slurm/{rule}.%j.err
+default-resources:
+  mem_mb: 8000
+  runtime: 120
+  disk_mb: 2000
+cluster-status: pipeline/snakemake/utils/check_status.py

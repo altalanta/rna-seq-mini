@@ -1,0 +1,56 @@
+project: "rnaseq-mini"
+engine: "snakemake"        # snakemake or nextflow
+se: false                   # single-end reads if true
+threads: 8
+memory_gb: 32
+organism: "yeast"
+reference:
+  transcripts_fa: "references/yeast/transcripts.fa.gz"
+  annotation_gtf: "references/yeast/annotation.gtf.gz"
+  decoy_fasta: "references/yeast/decoys.fa.gz"
+  salmon_index: "references/yeast/salmon_index"
+  auto_download: false  # Set to true to auto-download human/mouse refs if missing
+fastqc:
+  extra: ""
+multiqc:
+  title: "RNA-seq QC"
+salmon:
+  libtype: "A"
+  extra: "--validateMappings --gcBias"
+  threads: 4
+r:
+  design: "~ condition + batch"
+  contrast_variable: "condition"
+  batch_column: "batch"
+  alpha: 0.05
+  lfc_shrink: true
+  contrasts_file: "config/contrasts.tsv"
+  gene_id_column: "gene_id"
+  pvalue_adjust: "BH"
+fgsea:
+  genesets: null
+  min_size: 1
+  max_size: 200
+  nperm: 1000
+  padj_cutoff: 0.1
+  score_column: "log2FoldChange"
+report:
+  author: "Your Name"
+  title: "RNA-seq Analysis Report"
+  output_html: "results/report.html"
+paths:
+  samples: "config/samples.tsv"
+  outdir: "results"
+  logs: "logs"
+  qc: "results/qc"
+  salmon: "results/salmon"
+  counts: "results/counts"
+  de: "results/de"
+  fgsea: "results/fgsea"
+  report_dir: "results"
+containers:
+  enabled: false
+  image: "ghcr.io/example/rnaseq-mini:latest"
+profiles:
+  snakemake: "config/profiles/local.smk.yaml"
+  nextflow: "config/profiles/local.nf.config"
