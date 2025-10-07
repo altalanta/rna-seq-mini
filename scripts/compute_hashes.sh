@@ -10,8 +10,19 @@ HASH_FILE="hashes.sha256"
 # Key files to hash (order matters for consistency)
 FILES_TO_HASH=(
     "report.html"
-    "multiqc_report.html"
+    "qc/multiqc/multiqc_report.html"
     "counts/counts.tsv"
+    "counts/tpm.tsv"
+    "de/de_summary.tsv"
+    "fgsea/fgsea_summary.tsv"
+)
+
+# Additional files for numerical validation
+NUMERIC_FILES=(
+    "counts/counts.tsv"
+    "counts/tpm.tsv"
+    "de/de_summary.tsv"
+    "fgsea/fgsea_summary.tsv"
 )
 
 cd "$OUTPUT_DIR" || { echo "Error: Cannot find results directory"; exit 1; }
@@ -34,3 +45,4 @@ if [[ $# -eq 1 ]]; then
     cp "../$HASH_FILE" "$1"
     echo "[hash] Hashes also saved to $1"
 fi
+

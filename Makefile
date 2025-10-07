@@ -15,23 +15,39 @@ setup: ## Create Conda environments and install pre-commit
 	@mamba env create -f envs/salmon.yml || conda env create -f envs/salmon.yml
 	@mamba env create -f envs/r.yml || conda env create -f envs/r.yml
 	@conda run -n $(PY_ENV) pre-commit install
-	@echo "To auto-download references (e.g., for human/mouse), set 'reference.auto_download: true' in config/params.yaml and run 'make download'."
 
 lint: ## Run linters and workflow syntax checks
 	@conda run -n $(PY_ENV) ruff check .
 	@conda run -n $(PY_ENV) yamllint config envs pipeline report containers tests .github/workflows
-	@conda run -n $(PY_ENV) python scripts/validate_config.py
 	@conda run -n $(PY_ENV) snakemake -s pipeline/snakemake/Snakefile --lint
 	@conda run -n $(PY_ENV) nextflow run pipeline/nextflow/main.nf -profile local -stub-run >/dev/null
 
 smoke: ## Execute smoke test over toy dataset
 	@bash tests/run_smoke.sh
 
-hash: ## Compute hashes for results to verify determinism
-	@bash scripts/compute_hashes.sh
+validate: ## Validate cross-engine reproducibility
+	@conda run -n $(PY_ENV) python scripts/validate_determinism.py
 
-download: ## Download references if auto_download is enabled
-	@bash scripts/download_references.sh
+download-refs: ## Download reference genomes for specified species
+	@conda run -n $(PY_ENV) python scripts/download_references.py $(SPECIES)
+
+validate-full: ## Run comprehensive configuration validation
+	@conda run -n $(PY_ENV) python scripts/validate_config.py --comprehensive
+
+wizard: ## Run interactive configuration wizard
+	@conda run -n $(PY_ENV) python scripts/validate_config.py --wizard
+
+estimate: ## Estimate optimal resource allocation for your dataset
+	@conda run -n $(PY_ENV) python scripts/estimate_resources.py
+
+optimize: ## Generate optimized configuration based on resource estimation
+	@conda run -n $(PY_ENV) python scripts/estimate_resources.py --output config/params_optimized.yaml
+
+monitor: ## Monitor pipeline progress in real-time
+	@conda run -n $(PY_ENV) python scripts/monitor_progress.py
+
+monitor-once: ## Show current pipeline status once
+	@conda run -n $(PY_ENV) python scripts/monitor_progress.py --once
 
 run: ## Run pipeline using engine from params.yaml
 ifeq ($(ENGINE),snakemake)
