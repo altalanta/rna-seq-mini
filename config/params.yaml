@@ -51,6 +51,10 @@ paths:
 containers:
   enabled: false
   image: "ghcr.io/example/rnaseq-mini:latest"
+cache:
+  enabled: true
+  dir: ".cache"
+  max_age_days: 30
 profiles:
   snakemake: "config/profiles/local.smk.yaml"
   nextflow: "config/profiles/local.nf.config"
