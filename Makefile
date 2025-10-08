@@ -49,6 +49,43 @@ monitor: ## Monitor pipeline progress in real-time
 monitor-once: ## Show current pipeline status once
 	@conda run -n $(PY_ENV) python scripts/monitor_progress.py --once
 
+cache-stats: ## Show cache statistics
+	@conda run -n $(PY_ENV) python scripts/cache_manager.py --stats
+
+cache-cleanup: ## Clean up old cache entries
+	@conda run -n $(PY_ENV) python scripts/cache_manager.py --cleanup --dry-run
+	@echo "Run 'make cache-cleanup-force' to actually clean"
+
+cache-cleanup-force: ## Force cleanup of old cache entries
+	@conda run -n $(PY_ENV) python scripts/cache_manager.py --cleanup
+
+cache-clear: ## Clear entire cache (requires confirmation)
+	@conda run -n $(PY_ENV) python scripts/cache_manager.py --clear
+
+cache-clear-force: ## Force clear entire cache (no confirmation)
+	@conda run -n $(PY_ENV) python scripts/cache_manager.py --clear --force
+
+optimize-params: ## Analyze FASTQ files and optimize pipeline parameters
+	@conda run -n $(PY_ENV) python scripts/parameter_optimizer.py $(FASTQ_FILES) --output optimization_report.json
+
+train-optimizer: ## Train new parameter optimization models
+	@conda run -n $(PY_ENV) python scripts/parameter_optimizer.py --train-models $(FASTQ_FILES)
+
+auto-config: ## Automatically generate optimized configuration based on FASTQ files
+	@conda run -n $(PY_ENV) python scripts/auto_config.py $(FASTQ_FILES)
+
+web-app: ## Launch interactive web-based analysis environment
+	@conda run -n $(PY_ENV) python web_app/app.py
+
+web-requirements: ## Install web application dependencies
+	@pip install fastapi uvicorn jinja2 python-multipart aiofiles
+
+serve-results: ## Serve analysis results via web interface (requires web dependencies)
+	@echo "Installing web dependencies if needed..."
+	@pip install fastapi uvicorn jinja2 python-multipart aiofiles || echo "Install failed, but continuing..."
+	@echo "Starting web server on http://localhost:8000"
+	@python web_app/app.py
+
 run: ## Run pipeline using engine from params.yaml
 ifeq ($(ENGINE),snakemake)
 	@echo "Running Snakemake..."

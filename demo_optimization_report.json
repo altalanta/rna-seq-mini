@@ -1,0 +1,59 @@
+{
+  "summary": {
+    "optimization_completed": true,
+    "parameters_optimized": [
+      "salmon",
+      "r",
+      "optimization_metadata"
+    ],
+    "recommendation_confidence": {
+      "overall": 0.6416666666666667,
+      "quality_based": 0.925,
+      "consistency_based": 1.0,
+      "quantity_based": 0.0
+    }
+  },
+  "recommended_parameters": {
+    "salmon": {
+      "threads": 4,
+      "libtype": "U"
+    },
+    "r": {
+      "alpha": 0.04000000000000001
+    },
+    "optimization_metadata": {
+      "data_characteristics": {
+        "avg_read_length": 10,
+        "read_length_std": 0.0,
+        "avg_quality_score": 37,
+        "quality_score_std": 0.0,
+        "gc_content": 50.0,
+        "at_gc_ratio": 1.0,
+        "quality_variability": 0.0,
+        "read_length_cv": 0.0,
+        "bytes_per_read": 36.5,
+        "file_path": "tests/data/fastq/A_1_R1.fastq.gz"
+      },
+      "optimization_timestamp": "2025-10-08T15:41:36.594193",
+      "confidence_scores": {
+        "overall": 0.6416666666666667,
+        "quality_based": 0.925,
+        "consistency_based": 1.0,
+        "quantity_based": 0.0
+      }
+    }
+  },
+  "data_characteristics": {
+    "avg_read_length": 10,
+    "read_length_std": 0.0,
+    "avg_quality_score": 37,
+    "quality_score_std": 0.0,
+    "gc_content": 50.0,
+    "at_gc_ratio": 1.0,
+    "quality_variability": 0.0,
+    "read_length_cv": 0.0,
+    "bytes_per_read": 36.5,
+    "file_path": "tests/data/fastq/A_1_R1.fastq.gz"
+  },
+  "timestamp": "2025-10-08T15:41:36.594193"
+}

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Plotly.js for interactive plots -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link href="/static/css/style.css" rel="stylesheet">
+
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-dna me-2"></i>
+                RNASEQ-MINI Analysis Dashboard
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#overview">Overview</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#qc">Quality Control</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#de">Differential Expression</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#pathways">Pathway Analysis</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#export">Export</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Overview Section -->
+        <section id="overview" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-chart-line me-2"></i>Analysis Overview</h2>
+                </div>
+            </div>
+
+            <div class="row" id="stats-cards">
+                <!-- Statistics cards will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Quality Control Section -->
+        <section id="qc" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-chart-bar me-2"></i>Quality Control</h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Sample Quality Overview</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="qc-plot" style="height: 400px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>QC Reports</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="fastqc-links">
+                                <!-- FastQC report links will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Differential Expression Section -->
+        <section id="de" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-volcano me-2"></i>Differential Expression</h2>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <select class="form-select" id="de-contrast-select">
+                        <option value="">Select Contrast...</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <input type="number" class="form-control" id="pvalue-threshold" value="0.05" step="0.01" min="0.001" max="0.1">
+                    <label for="pvalue-threshold" class="form-label small">P-value Threshold</label>
+                </div>
+
+                <div class="col-md-3">
+                    <input type="number" class="form-control" id="logfc-threshold" value="1.0" step="0.1" min="0.1" max="5.0">
+                    <label for="logfc-threshold" class="form-label small">LogFC Threshold</label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Volcano Plot</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="updateVolcanoPlot()">
+                                <i class="fas fa-sync me-1"></i>Update
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="volcano-plot" style="height: 500px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Expression Heatmap</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="updateHeatmap('padj')">
+                                    Sort by P-value
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary" onclick="updateHeatmap('log2FoldChange')">
+                                    Sort by Fold Change
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="heatmap-plot" style="height: 600px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pathway Analysis Section -->
+        <section id="pathways" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-project-diagram me-2"></i>Pathway Analysis</h2>
+                </div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <select class="form-select" id="pathway-contrast-select">
+                        <option value="">Select Contrast...</option>
+                    </select>
+                </div>
+
+                <div class="col-md-3">
+                    <input type="number" class="form-control" id="pathway-threshold" value="0.05" step="0.01" min="0.001" max="0.1">
+                    <label for="pathway-threshold" class="form-label small">P-value Threshold</label>
+                </div>
+
+                <div class="col-md-3">
+                    <input type="number" class="form-control" id="top-pathways" value="20" min="5" max="100">
+                    <label for="top-pathways" class="form-label small">Top Pathways</label>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5>Pathway Enrichment</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="updatePathwayPlot()">
+                                <i class="fas fa-sync me-1"></i>Update
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div id="pathway-plot" style="height: 500px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Pathway Details</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="pathway-details">
+                                <!-- Pathway details will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Export Section -->
+        <section id="export" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-download me-2"></i>Data Export</h2>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Export Options</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="export-type" class="form-label">Data Type</label>
+                                <select class="form-select" id="export-type">
+                                    <option value="de">Differential Expression</option>
+                                    <option value="pathways">Pathway Analysis</option>
+                                    <option value="counts">Gene Counts</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="export-contrast" class="form-label">Contrast (for DE/Pathways)</label>
+                                <select class="form-select" id="export-contrast">
+                                    <option value="">Select Contrast...</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="export-format" class="form-label">Format</label>
+                                <select class="form-select" id="export-format">
+                                    <option value="json">JSON</option>
+                                    <option value="csv">CSV</option>
+                                </select>
+                            </div>
+
+                            <button class="btn btn-primary" onclick="exportData()">
+                                <i class="fas fa-download me-2"></i>Export Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Quick Actions</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-outline-primary" onclick="window.open('/api/results', '_blank')">
+                                    <i class="fas fa-database me-2"></i>View Raw API Data
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="refreshAllData()">
+                                    <i class="fas fa-sync me-2"></i>Refresh All Data
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Loading Modal -->
+    <div class="modal fade" id="loadingModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2">Loading data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
