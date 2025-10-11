@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rnaseq-mini
+  namespace: rnaseq
+  labels:
+    app: rnaseq-mini
+    component: pipeline
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rnaseq-mini
+      component: pipeline
+  template:
+    metadata:
+      labels:
+        app: rnaseq-mini
+        component: pipeline
+    spec:
+      containers:
+      - name: rnaseq-mini
+        image: rnaseq-mini:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: web
+        - containerPort: 5000
+          name: api
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: REDIS_URL
+          value: "redis://redis-service:6379"
+        - name: DATABASE_URL
+          value: "postgresql://rnaseq_user:rnaseq_password@postgres-service:5432/rnaseq_mini"
+        - name: RESULTS_DIR
+          value: "/app/results"
+        - name: CACHE_DIR
+          value: "/app/.cache"
+        volumeMounts:
+        - name: results-storage
+          mountPath: /app/results
+        - name: cache-storage
+          mountPath: /app/.cache
+        - name: config-storage
+          mountPath: /app/config
+        - name: data-storage
+          mountPath: /app/data
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+        readinessProbe:
+          httpGet:
+            path: /api/results
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+      volumes:
+      - name: results-storage
+        persistentVolumeClaim:
+          claimName: rnaseq-results-pvc
+      - name: cache-storage
+        persistentVolumeClaim:
+          claimName: rnaseq-cache-pvc
+      - name: config-storage
+        configMap:
+          name: rnaseq-config
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: rnaseq-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rnaseq-mini-service
+  namespace: rnaseq
+  labels:
+    app: rnaseq-mini
+spec:
+  selector:
+    app: rnaseq-mini
+    component: pipeline
+  ports:
+  - name: web
+    port: 80
+    targetPort: 8000
+    protocol: TCP
+  - name: api
+    port: 5000
+    targetPort: 5000
+    protocol: TCP
+  type: ClusterIP
