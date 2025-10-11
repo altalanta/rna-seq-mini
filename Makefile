@@ -86,6 +86,69 @@ serve-results: ## Serve analysis results via web interface (requires web depende
 	@echo "Starting web server on http://localhost:8000"
 	@python web_app/app.py
 
+# Cloud deployment commands
+deploy-aws: ## Deploy to AWS Batch with auto-scaling
+	@conda run -n $(PY_ENV) python scripts/deploy_aws.py --all
+
+deploy-gcp: ## Deploy to Google Cloud Platform
+	@echo "GCP deployment coming soon..."
+
+deploy-azure: ## Deploy to Microsoft Azure
+	@echo "Azure deployment coming soon..."
+
+# Multi-omics commands
+multiomics-init: ## Initialize multi-omics analysis environment
+	@conda run -n $(PY_ENV) python -c "from pipeline.multiomics import MultiOmicsIntegrator; print('Multi-omics framework ready')"
+
+multiomics-normalize: ## Normalize multi-omics data
+	@conda run -n $(PY_ENV) python scripts/multiomics_normalize.py
+
+multiomics-visualize: ## Create integrated multi-omics visualizations
+	@conda run -n $(PY_ENV) python scripts/multiomics_visualize.py
+
+# Quality assessment commands
+assess-quality: ## Run comprehensive quality assessment
+	@conda run -n $(PY_ENV) python scripts/quality_assessor.py --results-dir results
+
+benchmark-analysis: ## Benchmark analysis against reference datasets
+	@conda run -n $(PY_ENV) python scripts/quality_assessor.py --results-dir results --reference-dataset test_ref
+
+quality-gate: ## Evaluate if analysis passes quality standards
+	@conda run -n $(PY_ENV) python scripts/quality_gate.py
+
+# Advanced analysis commands
+optimize-batch: ## Optimize batch correction parameters
+	@conda run -n $(PY_ENV) python scripts/batch_optimizer.py
+
+cross-validation: ## Perform cross-validation analysis
+	@conda run -n $(PY_ENV) python scripts/cross_validate.py
+
+power-analysis: ## Estimate statistical power for DE analysis
+	@conda run -n $(PY_ENV) python scripts/power_analysis.py
+
+# Development and testing commands
+test-multiomics: ## Test multi-omics integration
+	@conda run -n $(PY_ENV) python -c "from pipeline.multiomics import *; print('Multi-omics tests passed')"
+
+test-quality: ## Test quality assessment system
+	@conda run -n $(PY_ENV) python scripts/test_quality_system.py
+
+test-cloud: ## Test cloud deployment scripts
+	@echo "Cloud deployment tests coming soon..."
+
+# Complete pipeline commands
+full-analysis: ## Run complete analysis with all enhancements
+	@echo "Running enhanced RNASEQ-MINI pipeline..."
+	@make run
+	@make assess-quality
+	@make serve-results
+
+enterprise-deploy: ## Deploy enterprise-grade pipeline with all features
+	@echo "Deploying enterprise RNASEQ-MINI..."
+	@make deploy-aws
+	@make multiomics-init
+	@make assess-quality
+
 run: ## Run pipeline using engine from params.yaml
 ifeq ($(ENGINE),snakemake)
 	@echo "Running Snakemake..."

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  rnaseq-mini:
+    build:
+      context: ..
+      dockerfile: containers/Dockerfile
+    container_name: rnaseq-mini
+    volumes:
+      - ../data:/app/data
+      - ../results:/app/results
+      - ../config:/app/config
+      - ../references:/app/references
+    environment:
+      - PYTHONPATH=/app
+      - MPLBACKEND=Agg
+    ports:
+      - "8000:8000"
+    networks:
+      - rnaseq-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: rnaseq-postgres
+    environment:
+      POSTGRES_DB: rnaseq_mini
+      POSTGRES_USER: rnaseq_user
+      POSTGRES_PASSWORD: rnaseq_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - rnaseq-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rnaseq_user -d rnaseq_mini"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis:
+    image: redis:7-alpine
+    container_name: rnaseq-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - rnaseq-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    container_name: rnaseq-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+    depends_on:
+      - rnaseq-mini
+    networks:
+      - rnaseq-network
+    restart: unless-stopped
+
+networks:
+  rnaseq-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

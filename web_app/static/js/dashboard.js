@@ -616,3 +616,4 @@ setInterval(async function() {
         // Silently fail - this is just for auto-refresh
     }
 }, 30000); // Check every 30 seconds
+
