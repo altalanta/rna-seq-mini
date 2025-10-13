@@ -16,6 +16,21 @@ setup: ## Create Conda environments and install pre-commit
 	@mamba env create -f envs/r.yml || conda env create -f envs/r.yml
 	@conda run -n $(PY_ENV) pre-commit install
 
+setup-singlecell: ## Install single-cell analysis dependencies
+	@pip install -r requirements-singlecell.txt
+
+setup-web: ## Install web application dependencies
+	@pip install -r requirements-web.txt
+
+setup-api: ## Install API dependencies
+	@pip install aiohttp fastapi uvicorn
+
+setup-all: ## Install all dependencies
+	@make setup
+	@make setup-singlecell
+	@make setup-web
+	@make setup-api
+
 lint: ## Run linters and workflow syntax checks
 	@conda run -n $(PY_ENV) ruff check .
 	@conda run -n $(PY_ENV) yamllint config envs pipeline report containers tests .github/workflows
@@ -148,6 +163,56 @@ enterprise-deploy: ## Deploy enterprise-grade pipeline with all features
 	@make deploy-aws
 	@make multiomics-init
 	@make assess-quality
+	@make api-server
+
+# Single-cell analysis commands
+singlecell-quant: ## Run single-cell RNA-seq quantification
+	@conda run -n $(PY_ENV) python scripts/singlecell_quantify.py $(FASTQ_FILES)
+
+singlecell-cluster: ## Run single-cell clustering analysis
+	@conda run -n $(PY_ENV) python scripts/singlecell_cluster.py
+
+singlecell-annotate: ## Run single-cell cell type annotation
+	@conda run -n $(PY_ENV) python scripts/singlecell_annotate.py
+
+singlecell-visualize: ## Create single-cell visualizations
+	@conda run -n $(PY_ENV) python scripts/singlecell_visualize.py
+
+singlecell-spatial: ## Run spatial transcriptomics analysis
+	@conda run -n $(PY_ENV) python scripts/spatial_analysis.py
+
+# API and integration commands
+api-server: ## Start the REST API server
+	@conda run -n $(PY_ENV) python api/server.py
+
+api-client: ## Test API client functionality
+	@conda run -n $(PY_ENV) python -c "from api.client import RNASEQMiniSDK; sdk = RNASEQMiniSDK(); print('API client ready')"
+
+webhook-setup: ## Setup webhook integrations
+	@conda run -n $(PY_ENV) python scripts/webhook_setup.py
+
+plugin-install: ## Install custom plugins
+	@conda run -n $(PY_ENV) python scripts/plugin_installer.py $(PLUGIN_URL)
+
+# Complete analysis workflows
+singlecell-workflow: ## Run complete single-cell analysis workflow
+	@echo "Running complete single-cell workflow..."
+	@make singlecell-quant
+	@make singlecell-cluster
+	@make singlecell-annotate
+	@make singlecell-visualize
+
+spatial-workflow: ## Run complete spatial transcriptomics workflow
+	@echo "Running complete spatial transcriptomics workflow..."
+	@make singlecell-quant
+	@make singlecell-spatial
+	@make singlecell-visualize
+
+multiomics-workflow: ## Run complete multi-omics analysis
+	@echo "Running complete multi-omics workflow..."
+	@make run
+	@make multiomics-normalize
+	@make multiomics-visualize
 
 run: ## Run pipeline using engine from params.yaml
 ifeq ($(ENGINE),snakemake)

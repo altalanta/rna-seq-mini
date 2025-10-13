@@ -164,3 +164,4 @@ class MultiOmicsDataset:
             integrated_metadata=self.integrated_metadata.loc[common_samples],
             integration_method=self.integration_method
         )
+
