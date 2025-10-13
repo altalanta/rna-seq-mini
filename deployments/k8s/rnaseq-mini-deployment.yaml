@@ -101,3 +101,4 @@ spec:
     targetPort: 5000
     protocol: TCP
   type: ClusterIP
+
