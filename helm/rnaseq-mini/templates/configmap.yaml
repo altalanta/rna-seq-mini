@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "rnaseq-mini.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rnaseq-mini.labels" . | nindent 4 }}
+    app: rnaseq-mini
+    component: config
+data:
+  params.yaml: |
+    project: "rnaseq-mini"
+    engine: "snakemake"
+    se: false
+    threads: 8
+    memory_gb: 32
+    organism: "human"
+    reference:
+      transcripts_fa: "references/human/transcripts.fa.gz"
+      annotation_gtf: "references/human/annotation.gtf.gz"
+      decoy_fasta: "references/human/decoys.fa.gz"
+      salmon_index: "references/human/salmon_index"
+      auto_download: true
+    fastqc:
+      extra: ""
+    multiqc:
+      title: "RNA-seq QC"
+    salmon:
+      libtype: "A"
+      extra: "--validateMappings --gcBias"
+      threads: 4
+    r:
+      design: "~ condition + batch"
+      contrast_variable: "condition"
+      batch_column: "batch"
+      alpha: 0.05
+      lfc_shrink: true
+      contrasts_file: "config/contrasts.tsv"
+      gene_id_column: "gene_id"
+      pvalue_adjust: "BH"
+    fgsea:
+      genesets: null
+      min_size: 15
+      max_size: 500
+      nperm: 1000
+      padj_cutoff: 0.25
+      score_column: "log2FoldChange"
+    report:
+      author: "RNASEQ-MINI User"
+      title: "RNA-seq Analysis Report"
+      output_html: "results/report.html"
+    paths:
+      samples: "config/samples.tsv"
+      outdir: "results"
+      logs: "logs"
+      qc: "results/qc"
+      salmon: "results/salmon"
+      counts: "results/counts"
+      de: "results/de"
+      fgsea: "results/fgsea"
+      report_dir: "results"
+    containers:
+      enabled: false
+      image: "ghcr.io/example/rnaseq-mini:latest"
+    cache:
+      enabled: true
+      dir: ".cache"
+      max_age_days: 30
+    profiles:
+      snakemake: "config/profiles/local.smk.yaml"
+      nextflow: "config/profiles/local.nf.config"
+    # Single-cell configuration
+    singlecell:
+      enabled: true
+      quantification:
+        method: "cellranger"
+        threads: 8
+        memory_gb: 32
+      clustering:
+        method: "leiden"
+        resolution: 1.0
+        n_pcs: 50
+      annotation:
+        method: "marker_based"
+        min_confidence: 0.7
+      spatial:
+        enabled: true
+        technology: "visium"
+        spot_diameter: 55.0
+    # Multi-omics configuration
+    multiomics:
+      enabled: true
+      normalization_method: "quantile"
+      integration_method: "harmony"
+      batch_correction: true
+    # Quality assessment
+    quality:
+      assessment_enabled: true
+      benchmarking_enabled: true
+      quality_gates: ["basic", "publication"]
+    # Cloud configuration
+    cloud:
+      enabled: true
+      provider: "kubernetes"
+      auto_scaling: true
+      monitoring: true
+    # API configuration
+    api:
+      enabled: true
+      host: "0.0.0.0"
+      port: 8001
+      cors_origins: ["*"]
+      rate_limit: 100
+      auth_required: false
+    # Security configuration
+    security:
+      pod_security_standards: "restricted"
+      network_policies: true
+      encryption_enabled: true
+      audit_logging: true
+  contrasts.tsv: |
+    groupA	groupB
+    control	treated
+    WT	KO
+  samples.tsv: |
+    sample	condition	fastq_1	fastq_2	batch
+    sample1	control	data/sample1_R1.fastq.gz	data/sample1_R2.fastq.gz	batch1
+    sample2	control	data/sample2_R1.fastq.gz	data/sample2_R2.fastq.gz	batch1
+    sample3	treated	data/sample3_R1.fastq.gz	data/sample3_R2.fastq.gz	batch2
+    sample4	treated	data/sample4_R1.fastq.gz	data/sample4_R2.fastq.gz	batch2

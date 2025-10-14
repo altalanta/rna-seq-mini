@@ -718,3 +718,5 @@ class SpatialAnalyzer:
         except Exception as e:
             logger.error(f"Error exporting spatial results: {e}")
             return ""
+
+

@@ -550,3 +550,5 @@ class SingleCellIntegrator:
             logger.error(f"Error creating integration visualizations: {e}")
 
         return plot_files
+
+
