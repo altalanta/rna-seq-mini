@@ -760,3 +760,5 @@ class SingleCellVisualizer:
         """
 
         return html
+
+

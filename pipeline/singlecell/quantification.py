@@ -605,3 +605,5 @@ class SingleCellQuantifier:
         except ImportError:
             logger.warning("anndata not available for matrix combination")
             return ""
+
+

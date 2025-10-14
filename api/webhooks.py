@@ -523,3 +523,5 @@ class WebhookFormatter:
             return "teams"
 
         return "generic"
+
+

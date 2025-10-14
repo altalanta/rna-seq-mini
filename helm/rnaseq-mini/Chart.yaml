@@ -1,0 +1,23 @@
+apiVersion: v2
+name: rnaseq-mini
+description: A Helm chart for RNASEQ-MINI bioinformatics platform
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - bioinformatics
+  - rna-seq
+  - single-cell
+  - genomics
+home: https://github.com/rnaseq-mini/rnaseq-mini
+sources:
+  - https://github.com/rnaseq-mini/rnaseq-mini
+maintainers:
+  - name: RNASEQ-MINI Team
+    email: support@rnaseq-mini.org
+annotations:
+  category: Analytics
+  licenses: MIT
+  images: |
+    - name: rnaseq-mini
+      image: rnaseq-mini:latest
