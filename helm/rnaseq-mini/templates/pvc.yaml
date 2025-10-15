@@ -48,3 +48,4 @@ spec:
     requests:
       storage: {{ .Values.persistence.data.size | quote }}
   storageClassName: {{ include "rnaseq-mini.storageClass" . }}
+

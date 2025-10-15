@@ -21,3 +21,4 @@ annotations:
   images: |
     - name: rnaseq-mini
       image: rnaseq-mini:latest
+
