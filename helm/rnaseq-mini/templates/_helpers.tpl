@@ -89,3 +89,4 @@ Generate full storage class name
 {{- "standard" }}
 {{- end }}
 {{- end }}
+

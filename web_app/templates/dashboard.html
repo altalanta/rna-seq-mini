@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="description" content="Interactive RNA-seq analysis dashboard for exploring differential expression, pathway analysis, and quality control results">
     <title>{{ title }}</title>
 
     <!-- Bootstrap CSS -->
@@ -25,12 +26,15 @@
                 RNASEQ-MINI Analysis Dashboard
             </a>
 
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#gene-search">Gene Search</a>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#overview">Overview</a>
                     </li>
@@ -44,9 +48,23 @@
                         <a class="nav-link" href="#pathways">Pathway Analysis</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="#comparison">Comparison</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#sharing">Sharing</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#export">Export</a>
                     </li>
                 </ul>
+
+                <!-- Quick Gene Search in Navbar -->
+                <form class="d-flex me-3" onsubmit="event.preventDefault(); searchForGene();" role="search">
+                    <input class="form-control me-2" type="search" id="navbar-gene-search" placeholder="Quick gene search..." aria-label="Quick gene search" autocomplete="off">
+                    <button class="btn btn-outline-light" type="submit" aria-label="Search">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </nav>
@@ -62,6 +80,62 @@
 
             <div class="row" id="stats-cards">
                 <!-- Statistics cards will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Gene Search Section -->
+        <section id="gene-search" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-search me-2"></i>Gene Search</h2>
+                    <p class="text-muted">Search for specific genes across all contrasts and data types</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Gene Search Tool</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <input type="text" class="form-control form-control-lg" id="gene-search-input" placeholder="Enter gene name or ID..." aria-label="Gene search input" autocomplete="off">
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-primary w-100" onclick="searchForGene()" aria-label="Search for gene">
+                                        <i class="fas fa-search me-2"></i>Search Gene
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-secondary w-100" onclick="clearGeneSearch()" aria-label="Clear gene search">
+                                        <i class="fas fa-times me-2"></i>Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="gene-search-results" style="display: none;">
+                                <h6>Search Results</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm" id="gene-search-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Gene</th>
+                                                <th>Contrast</th>
+                                                <th>Log2 FC</th>
+                                                <th>P-value</th>
+                                                <th>Significant</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -162,6 +236,69 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Data Tables Section -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-table me-2"></i>Differential Expression Results</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="toggleDeTable()">
+                                    <i class="fas fa-eye me-1"></i>Show/Hide Table
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="exportDeTable()">
+                                    <i class="fas fa-download me-1"></i>Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="de-table-container" style="display: none;">
+                                <div class="mb-3">
+                                    <div class="row">
+                                        <div class="col-md-4">
+                                            <input type="text" class="form-control" id="de-search" placeholder="Search genes...">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <select class="form-select" id="de-significance-filter">
+                                                <option value="">All genes</option>
+                                                <option value="significant">Significant only</option>
+                                                <option value="up">Upregulated</option>
+                                                <option value="down">Downregulated</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="number" class="form-control" id="de-logfc-filter" placeholder="Min |LogFC|">
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button class="btn btn-primary w-100" onclick="filterDeTable()">Filter</button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover" id="de-results-table">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Gene</th>
+                                                <th>Base Mean</th>
+                                                <th>Log2 FC</th>
+                                                <th>P-value</th>
+                                                <th>Adj P-value</th>
+                                                <th>Significant</th>
+                                                <th>Direction</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody></tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted" id="de-table-info">No data loaded</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- Pathway Analysis Section -->
@@ -207,12 +344,265 @@
 
                 <div class="col-md-4">
                     <div class="card">
-                        <div class="card-header">
+                        <div class="card-header d-flex justify-content-between align-items-center">
                             <h5>Pathway Details</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="togglePathwayTable()">
+                                <i class="fas fa-table me-1"></i>View Table
+                            </button>
                         </div>
                         <div class="card-body">
                             <div id="pathway-details">
                                 <!-- Pathway details will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pathway Data Table Section -->
+            <div class="row mt-3">
+                <div class="col-12">
+                    <div class="card" id="pathway-table-card" style="display: none;">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-table me-2"></i>Pathway Enrichment Results</h5>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="togglePathwayTable()">
+                                    <i class="fas fa-eye-slash me-1"></i>Hide Table
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="exportPathwayTable()">
+                                    <i class="fas fa-download me-1"></i>Export
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <input type="text" class="form-control" id="pathway-search" placeholder="Search pathways...">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <select class="form-select" id="pathway-significance-filter">
+                                            <option value="">All pathways</option>
+                                            <option value="significant">Significant only</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <input type="number" class="form-control" id="pathway-nes-filter" placeholder="Min |NES|">
+                                    </div>
+                                    <div class="col-md-2">
+                                        <button class="btn btn-primary w-100" onclick="filterPathwayTable()">Filter</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover" id="pathway-results-table">
+                                    <thead class="table-dark">
+                                        <tr>
+                                            <th>Pathway</th>
+                                            <th>NES</th>
+                                            <th>P-value</th>
+                                            <th>Adj P-value</th>
+                                            <th>Size</th>
+                                            <th>Leading Edge Genes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                            <div class="mt-2">
+                                <small class="text-muted" id="pathway-table-info">No data loaded</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Comparison View Section -->
+        <section id="comparison" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-columns me-2"></i>Contrast Comparison</h2>
+                    <p class="text-muted">Compare multiple contrasts side-by-side to identify common patterns and differences</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Multi-Contrast Comparison Tool</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">Select Contrasts to Compare</label>
+                                    <div class="row" id="comparison-contrast-selection">
+                                        <!-- Contrast checkboxes will be populated by JavaScript -->
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100 mb-2" onclick="loadComparisonView()">
+                                        <i class="fas fa-chart-line me-2"></i>Generate Comparison
+                                    </button>
+                                    <button class="btn btn-outline-secondary w-100" onclick="clearComparisonView()">
+                                        <i class="fas fa-times me-2"></i>Clear
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="comparison-results" style="display: none;">
+                                <!-- Comparison results will be populated by JavaScript -->
+
+                                <!-- Summary Statistics -->
+                                <div class="row mb-4" id="comparison-summary">
+                                    <!-- Summary cards will be populated by JavaScript -->
+                                </div>
+
+                                <!-- Overlapping Genes Table -->
+                                <div class="row mb-4">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h6>Overlapping Significant Genes</h6>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="toggleOverlapTable()">
+                                                    <i class="fas fa-table me-1"></i>View Table
+                                                </button>
+                                            </div>
+                                            <div class="card-body">
+                                                <div id="overlap-summary-plot" style="height: 300px;"></div>
+                                                <div id="overlap-table-container" style="display: none;">
+                                                    <div class="table-responsive mt-3">
+                                                        <table class="table table-sm" id="overlap-genes-table">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Gene</th>
+                                                                    <th>Direction</th>
+                                                                    <th>Contrasts</th>
+                                                                    <th>Avg LogFC</th>
+                                                                    <th>Consistency</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody></tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Individual Contrast Views -->
+                                <div class="row" id="comparison-volcano-plots">
+                                    <!-- Individual volcano plots will be populated by JavaScript -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sharing Section -->
+        <section id="sharing" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-share-alt me-2"></i>Save & Share Analysis</h2>
+                    <p class="text-muted">Save your current analysis configuration and share it with collaborators</p>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-bookmark me-2"></i>Save Current View</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <input type="text" class="form-control" id="config-name" placeholder="Enter a name for this configuration..." maxlength="100">
+                                </div>
+                                <div class="col-md-4">
+                                    <button class="btn btn-primary w-100" onclick="saveCurrentConfiguration()">
+                                        <i class="fas fa-save me-2"></i>Save Configuration
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    This will save your current filters, selected contrasts, thresholds, and view settings.
+                                </small>
+                            </div>
+
+                            <!-- Saved Configurations List -->
+                            <div id="saved-configurations" class="mt-4" style="display: none;">
+                                <h6><i class="fas fa-history me-2"></i>Saved Configurations</h6>
+                                <div id="saved-configs-list">
+                                    <!-- Saved configurations will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-link me-2"></i>Share Link</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Shareable URL</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="share-url" readonly>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyShareUrl()">
+                                        <i class="fas fa-copy"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-success w-100" onclick="generateShareUrl()">
+                                <i class="fas fa-link me-2"></i>Generate Share Link
+                            </button>
+
+                            <div class="mt-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Generate a shareable URL that restores your current analysis state.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Load Configuration Section -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-folder-open me-2"></i>Load Saved Configuration</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <select class="form-select" id="load-config-select">
+                                        <option value="">Select a saved configuration...</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-primary" onclick="loadConfiguration()">
+                                        <i class="fas fa-upload me-2"></i>Load
+                                    </button>
+                                </div>
+                                <div class="col-md-3">
+                                    <button class="btn btn-outline-danger" onclick="deleteConfiguration()">
+                                        <i class="fas fa-trash me-2"></i>Delete
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -301,6 +691,31 @@
         </div>
     </div>
 
+    <!-- Gene Details Modal -->
+    <div class="modal fade" id="geneDetailsModal" tabindex="-1" aria-labelledby="geneDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="geneDetailsModalLabel">
+                        <i class="fas fa-dna me-2"></i>Gene Details: <span id="gene-name-title">Loading...</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="gene-details-content">
+                        <!-- Gene details will be populated by JavaScript -->
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="exportGeneData()">
+                        <i class="fas fa-download me-1"></i>Export Data
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -308,6 +723,7 @@
     <script src="/static/js/dashboard.js"></script>
 </body>
 </html>
+
 
 
 

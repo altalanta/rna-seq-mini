@@ -462,6 +462,146 @@ async def get_stats_overview():
     return stats
 
 
+@app.get("/api/genes/search")
+async def search_genes(
+    gene_query: str = Query(..., description="Gene name or ID to search for"),
+    exact_match: bool = Query(False, description="Whether to require exact gene name match")
+):
+    """Search for genes across all contrasts and return matching results."""
+    results = results_explorer.get_all_results()
+    search_results = []
+
+    if not gene_query.strip():
+        return {"results": [], "query": gene_query, "total_matches": 0}
+
+    # Search in differential expression data
+    de_data = results.get('differential_expression', {})
+
+    for contrast_name, contrast_info in de_data.get('contrasts', {}).items():
+        genes_data = contrast_info.get('data', [])
+
+        for gene_info in genes_data:
+            gene_name = gene_info.get('gene_name', gene_info.get('gene_id', ''))
+
+            # Check if gene matches search query
+            if exact_match:
+                matches = gene_name.lower() == gene_query.lower()
+            else:
+                matches = gene_query.lower() in gene_name.lower()
+
+            if matches:
+                search_results.append({
+                    'gene': gene_name,
+                    'gene_id': gene_info.get('gene_id', gene_name),
+                    'contrast': contrast_name,
+                    'log2FoldChange': float(gene_info.get('log2FoldChange', 0)),
+                    'padj': float(gene_info.get('padj', 1.0)),
+                    'baseMean': float(gene_info.get('baseMean', 0)),
+                    'significant': gene_info.get('padj', 1.0) < 0.05,
+                    'data_type': 'differential_expression'
+                })
+
+    # Also search in counts data for gene existence
+    counts_data = results.get('counts', {})
+    if counts_data.get('counts'):
+        genes_in_counts = counts_data['counts']['genes']
+
+        for result in search_results:
+            if result['gene_id'] in genes_in_counts:
+                result['in_counts'] = True
+            else:
+                result['in_counts'] = False
+
+    return {
+        "results": search_results,
+        "query": gene_query,
+        "total_matches": len(search_results),
+        "exact_match": exact_match
+    }
+
+
+@app.get("/api/genes/details")
+async def get_gene_details(
+    gene_id: str = Query(..., description="Gene ID to get detailed information for"),
+    contrast: Optional[str] = Query(None, description="Specific contrast to focus on")
+):
+    """Get detailed information for a specific gene including expression data and statistics."""
+    results = results_explorer.get_all_results()
+
+    # Get differential expression data for the gene
+    de_data = results.get('differential_expression', {})
+    gene_de_info = {}
+
+    for contrast_name, contrast_info in de_data.get('contrasts', {}).items():
+        genes_data = contrast_info.get('data', [])
+        for gene_info in genes_data:
+            current_gene_id = gene_info.get('gene_id', gene_info.get('gene_name', ''))
+            if current_gene_id == gene_id:
+                gene_de_info[contrast_name] = {
+                    'gene_name': gene_info.get('gene_name', gene_id),
+                    'gene_id': gene_id,
+                    'baseMean': float(gene_info.get('baseMean', 0)),
+                    'log2FoldChange': float(gene_info.get('log2FoldChange', 0)),
+                    'lfcSE': float(gene_info.get('lfcSE', 0)),
+                    'stat': float(gene_info.get('stat', 0)),
+                    'pvalue': float(gene_info.get('pvalue', 1.0)),
+                    'padj': float(gene_info.get('padj', 1.0)),
+                    'significant': gene_info.get('padj', 1.0) < 0.05,
+                    'direction': 'up' if gene_info.get('log2FoldChange', 0) > 0 else 'down'
+                }
+
+    # Get expression data if available
+    expression_data = {}
+    counts_data = results.get('counts', {})
+    if counts_data.get('counts'):
+        counts_df = pd.DataFrame(counts_data['counts']['data'])
+        counts_df = counts_df.set_index(counts_data['counts']['genes'])
+
+        if gene_id in counts_df.index:
+            gene_expression = counts_df.loc[gene_id]
+            expression_data = {
+                'samples': counts_data['counts']['samples'],
+                'expression_values': gene_expression.tolist(),
+                'mean_expression': float(gene_expression.mean()),
+                'max_expression': float(gene_expression.max()),
+                'min_expression': float(gene_expression.min())
+            }
+
+    # Get pathway information if available
+    pathway_info = []
+    pathway_data = results.get('pathways', {})
+    for contrast_name, contrast_info in pathway_data.get('contrasts', {}).items():
+        pathways_list = contrast_info.get('data', [])
+        for pathway in pathways_list:
+            leading_genes = pathway.get('leadingEdge', '').split(',') if pathway.get('leadingEdge') else []
+            if gene_id in leading_genes:
+                pathway_info.append({
+                    'pathway': pathway.get('pathway', 'Unknown'),
+                    'contrast': contrast_name,
+                    'NES': float(pathway.get('NES', 0)),
+                    'padj': float(pathway.get('padj', 1.0)),
+                    'size': int(pathway.get('size', 0))
+                })
+
+    # Compile comprehensive gene information
+    gene_details = {
+        'gene_id': gene_id,
+        'gene_name': gene_de_info.get(contrast or list(gene_de_info.keys())[0], {}).get('gene_name', gene_id) if gene_de_info else gene_id,
+        'differential_expression': gene_de_info,
+        'expression_data': expression_data,
+        'pathway_info': pathway_info,
+        'summary': {
+            'contrasts_analyzed': len(gene_de_info),
+            'significant_in_contrasts': len([c for c in gene_de_info.values() if c.get('significant', False)]),
+            'max_logfc': max([abs(info.get('log2FoldChange', 0)) for info in gene_de_info.values()]) if gene_de_info else 0,
+            'in_expression_data': bool(expression_data),
+            'in_pathways': len(pathway_info)
+        }
+    }
+
+    return gene_details
+
+
 if __name__ == "__main__":
     import uvicorn
 
