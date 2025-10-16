@@ -129,3 +129,4 @@ data:
     sample3	treated	data/sample3_R1.fastq.gz	data/sample3_R2.fastq.gz	batch2
     sample4	treated	data/sample4_R1.fastq.gz	data/sample4_R2.fastq.gz	batch2
 
+

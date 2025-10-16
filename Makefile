@@ -50,7 +50,7 @@ validate-full: ## Run comprehensive configuration validation
 	@conda run -n $(PY_ENV) python scripts/validate_config.py --comprehensive
 
 wizard: ## Run interactive configuration wizard
-	@conda run -n $(PY_ENV) python scripts/validate_config.py --wizard
+	@conda run -n $(PY_ENV) python scripts/setup_wizard.py
 
 estimate: ## Estimate optimal resource allocation for your dataset
 	@conda run -n $(PY_ENV) python scripts/estimate_resources.py
@@ -141,6 +141,30 @@ cross-validation: ## Perform cross-validation analysis
 power-analysis: ## Estimate statistical power for DE analysis
 	@conda run -n $(PY_ENV) python scripts/power_analysis.py
 
+# AI-powered insights commands
+ai-insights: ## Run AI-powered result interpretation and insights
+	@conda run -n $(PY_ENV) python scripts/ai_insights.py analyze --results-dir results --format both
+
+pathway-impact: ## Run advanced pathway impact analysis
+	@conda run -n $(PY_ENV) python scripts/pathway_impact_analyzer.py --results-dir results --format both
+
+gene-networks: ## Analyze gene interaction networks
+	@conda run -n $(PY_ENV) python scripts/gene_network_analyzer.py --results-dir results --format both
+
+predictive-modeling: ## Run predictive modeling and biomarker discovery
+	@conda run -n $(PY_ENV) python scripts/predictive_modeling.py --results-dir results --format both
+
+ai-explanations: ## Generate natural language explanations for different audiences
+	@conda run -n $(PY_ENV) python scripts/result_explanation.py --results-dir results --audiences researcher clinician student executive --format markdown
+
+ai-complete: ## Run complete AI-powered analysis suite
+	@echo "🧠 Running complete AI-powered analysis suite..."
+	@make ai-insights
+	@make pathway-impact
+	@make gene-networks
+	@make predictive-modeling
+	@make ai-explanations
+
 # Development and testing commands
 test-multiomics: ## Test multi-omics integration
 	@conda run -n $(PY_ENV) python -c "from pipeline.multiomics import *; print('Multi-omics tests passed')"
@@ -180,6 +204,22 @@ singlecell-visualize: ## Create single-cell visualizations
 
 singlecell-spatial: ## Run spatial transcriptomics analysis
 	@conda run -n $(PY_ENV) python scripts/spatial_analysis.py
+
+# Collaboration commands
+collaboration-server: ## Start real-time collaborative analysis server
+	@conda run -n $(PY_ENV) python scripts/collaborative_server.py server --host localhost --port 8765
+
+collaboration-create: ## Create a new collaborative session
+	@conda run -n $(PY_ENV) python scripts/collaborative_server.py create $(PROJECT_NAME) --config config/params.yaml
+
+collaboration-join: ## Join an existing collaborative session
+	@conda run -n $(PY_ENV) python scripts/collaborative_server.py join $(SESSION_ID) "$(USER_NAME)" "$(USER_EMAIL)"
+
+collaboration-notebook: ## Create a Jupyter notebook for collaborative analysis
+	@conda run -n $(PY_ENV) python scripts/jupyter_integration.py create $(SESSION_ID) --template standard
+
+collaboration-notifications: ## Setup notification channels (Slack, Discord, etc.)
+	@conda run -n $(PY_ENV) python scripts/notification_manager.py setup
 
 # API and integration commands
 api-server: ## Start the REST API server
