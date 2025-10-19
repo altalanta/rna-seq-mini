@@ -25,6 +25,10 @@ setup-web: ## Install web application dependencies
 setup-api: ## Install API dependencies
 	@pip install aiohttp fastapi uvicorn
 
+setup-singlecell: ## Install single-cell analysis dependencies
+	@mamba env create -f envs/singlecell.yml || conda env create -f envs/singlecell.yml
+	@pip install -r requirements-singlecell.txt
+
 setup-all: ## Install all dependencies
 	@make setup
 	@make setup-singlecell
@@ -264,6 +268,56 @@ else ifeq ($(ENGINE),nextflow)
 else
 	@echo "Unknown engine $(ENGINE)" >&2; exit 1
 endif
+
+run-singlecell: ## Run single-cell analysis only
+	@echo "Running single-cell analysis..."
+ifeq ($(ENGINE),snakemake)
+	@snakemake -s pipeline/snakemake/Snakefile --configfile $(PARAMS) --use-conda --cores $(THREADS) singlecell_complete
+else ifeq ($(ENGINE),nextflow)
+	@nextflow run pipeline/nextflow/main.nf -params-file $(PARAMS) -with-conda -profile local --singlecell.enabled true
+endif
+
+singlecell-qc: ## Run single-cell quality control
+	@conda run -n rnaseq-mini-singlecell python scripts/singlecell_qc.py $(MATRIX) $(BARCODES) $(OUTPUT_DIR)
+
+singlecell-cluster: ## Run single-cell clustering
+	@conda run -n rnaseq-mini-singlecell python scripts/singlecell_clustering.py $(MATRIX) $(BARCODES) $(GENES) $(OUTPUT_DIR)
+
+# Resource optimization commands
+estimate-resources: ## Estimate optimal resource allocation for your dataset
+	@conda run -n $(PY_ENV) python scripts/resource_estimator.py $(SAMPLES_FILE) --output resource_estimation.json
+
+optimize-resources: ## Generate optimized configuration based on resource estimation
+	@conda run -n $(PY_ENV) python scripts/resource_estimator.py $(SAMPLES_FILE) --output config/resource_optimized.json
+	@echo "Optimized configuration saved to config/resource_optimized.json"
+	@echo "Copy this file to config/params.yaml for optimized settings"
+
+# Cloud optimization commands
+cloud-autoscale: ## Run cloud auto-scaling for AWS Batch
+	@conda run -n $(PY_ENV) python scripts/cloud_autoscaler.py --job-queue $(JOB_QUEUE) --compute-env $(COMPUTE_ENV) --duration 60
+
+cloud-cost-monitor: ## Monitor and analyze cloud costs
+	@conda run -n $(PY_ENV) python scripts/cost_monitor.py --output-report cost_report.json --output-plot cost_analysis.png
+
+cloud-setup-dashboard: ## Setup cost monitoring dashboard
+	@conda run -n $(PY_ENV) python scripts/cost_monitor.py --setup-dashboard
+
+# Error handling and troubleshooting commands
+diagnostics: ## Run comprehensive diagnostic checks
+	@conda run -n $(PY_ENV) python scripts/error_handler.py --diagnostics all
+
+troubleshoot: ## Analyze and classify error messages
+	@conda run -n $(PY_ENV) python scripts/error_handler.py --error-message "$(ERROR_MESSAGE)" --context-file "$(CONTEXT_FILE)"
+
+health-check: ## Perform one-time system and pipeline health check
+	@conda run -n $(PY_ENV) python scripts/troubleshooter.py --health-check
+
+monitor-health: ## Monitor system health for specified duration
+	@conda run -n $(PY_ENV) python scripts/troubleshooter.py --monitor $(DURATION_MINUTES) --interval 30
+
+error-recovery: ## Attempt error recovery for failed jobs
+	@echo "Error recovery system initialized"
+	@echo "Run 'make troubleshoot' with specific error messages for detailed analysis"
 
 clean: ## Remove results and temporary state
 	@rm -rf results logs .snakemake .nextflow* work

@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "rnaseq-mini.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rnaseq-mini.labels" . | nindent 4 }}
+    app: rnaseq-mini
+    component: pipeline
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+  - name: web
+    port: {{ .Values.service.port }}
+    targetPort: {{ .Values.service.targetPort }}
+    protocol: TCP
+  - name: api
+    port: 8001
+    targetPort: 8001
+    protocol: TCP
+  selector:
+    {{- include "rnaseq-mini.selectorLabels" . | nindent 4 }}
+    app: rnaseq-mini
+    component: pipeline
+  {{- with .Values.service.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+
+
+
