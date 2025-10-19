@@ -1,0 +1,271 @@
+# Default values for rnaseq-mini
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Application configuration
+replicaCount: 3
+
+image:
+  registry: docker.io
+  repository: rnaseq-mini
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+  annotations: {}
+
+# Ingress configuration
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: rnaseq-mini.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: rnaseq-mini-tls
+  #    hosts:
+  #      - rnaseq-mini.local
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 4000m
+    memory: 8Gi
+  requests:
+    cpu: 1000m
+    memory: 2Gi
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 2000
+
+# Security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+      - ALL
+
+# Environment variables
+env:
+  ENVIRONMENT: "production"
+  REDIS_URL: "redis://redis-service:6379"
+  DATABASE_URL: "postgresql://rnaseq_user:rnaseq_password@postgres-service:5432/rnaseq_mini"
+  RESULTS_DIR: "/app/results"
+  CACHE_DIR: "/app/.cache"
+
+# Configuration volumes
+config:
+  # ConfigMap for application configuration
+  configMap:
+    enabled: true
+    data:
+      params.yaml: |
+        project: "rnaseq-mini"
+        engine: "snakemake"
+        se: false
+        threads: 8
+        memory_gb: 32
+        organism: "human"
+        # ... (full config would be here)
+
+  # Secret for sensitive configuration
+  secret:
+    enabled: true
+    data:
+      database_password: "rnaseq_password"
+      api_key: "your-api-key-here"
+
+# Persistent volumes
+persistence:
+  # Results storage
+  results:
+    enabled: true
+    size: 100Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteMany
+
+  # Cache storage
+  cache:
+    enabled: true
+    size: 50Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteMany
+
+  # Data storage
+  data:
+    enabled: true
+    size: 500Gi
+    storageClass: ""
+    accessModes:
+      - ReadWriteMany
+
+# Database configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "postgres_password"
+    username: "rnaseq_user"
+    password: "rnaseq_password"
+    database: "rnaseq_mini"
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Monitoring configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      namespace: monitoring
+      interval: 30s
+  grafana:
+    enabled: true
+    adminPassword: "grafana_password"
+    persistence:
+      enabled: true
+      size: 5Gi
+
+# Logging configuration
+logging:
+  enabled: true
+  loki:
+    enabled: true
+    persistence:
+      enabled: true
+      size: 10Gi
+
+# Auto-scaling configuration
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 20
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# Service mesh configuration
+serviceMesh:
+  enabled: false
+  istio:
+    enabled: false
+    gateways:
+      - name: rnaseq-mini-gateway
+        servers:
+          - port:
+              number: 80
+              name: http
+              protocol: HTTP
+            hosts:
+              - "*"
+
+# Network policies
+networkPolicy:
+  enabled: true
+  podSelector:
+    matchLabels:
+      app: rnaseq-mini
+  policyTypes:
+    - Ingress
+    - Egress
+
+# Backup configuration
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  retention: "7d"
+  s3:
+    bucket: "rnaseq-mini-backups"
+    region: "us-east-1"
+
+# SSL/TLS configuration
+tls:
+  enabled: false
+  secretName: "rnaseq-mini-tls"
+  issuerRef:
+    name: "letsencrypt-prod"
+    kind: "ClusterIssuer"
+
+# External dependencies
+dependencies:
+  # Enable if you want to install dependencies via Helm
+  postgresql:
+    enabled: true
+    version: "13.x.x"
+  redis:
+    enabled: true
+    version: "17.x.x"
+
+# Development overrides
+development:
+  enabled: false
+  debug: true
+  image:
+    tag: "dev"
+
+# Production overrides
+production:
+  enabled: false
+  replicaCount: 5
+  resources:
+    limits:
+      cpu: 8000m
+      memory: 16Gi
+    requests:
+      cpu: 2000m
+      memory: 4Gi
+  autoscaling:
+    minReplicas: 3
+    maxReplicas: 50
+  persistence:
+    results:
+      size: 500Gi
+    cache:
+      size: 200Gi
+    data:
+      size: 2Ti
+
+
+
+

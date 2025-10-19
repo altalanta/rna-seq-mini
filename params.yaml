@@ -1,0 +1,203 @@
+project: "rnaseq-mini"
+engine: "snakemake"        # snakemake or nextflow
+se: false                   # single-end reads if true
+threads: 8
+memory_gb: 32
+organism: "yeast"
+reference:
+  transcripts_fa: "references/yeast/transcripts.fa.gz"
+  annotation_gtf: "references/yeast/annotation.gtf.gz"
+  decoy_fasta: "references/yeast/decoys.fa.gz"
+  salmon_index: "references/yeast/salmon_index"
+  auto_download: true  # Set to true to auto-download references if missing
+fastqc:
+  extra: ""
+multiqc:
+  title: "RNA-seq QC"
+salmon:
+  libtype: "A"
+  extra: "--validateMappings --gcBias"
+  threads: 4
+r:
+  design: "~ condition + batch"
+  contrast_variable: "condition"
+  batch_column: "batch"
+  alpha: 0.05
+  lfc_shrink: true
+  contrasts_file: "config/contrasts.tsv"
+  gene_id_column: "gene_id"
+  pvalue_adjust: "BH"
+fgsea:
+  genesets: null
+  min_size: 1
+  max_size: 200
+  nperm: 1000
+  padj_cutoff: 0.1
+  score_column: "log2FoldChange"
+report:
+  author: "Your Name"
+  title: "RNA-seq Analysis Report"
+  output_html: "results/report.html"
+paths:
+  samples: "config/samples.tsv"
+  outdir: "results"
+  logs: "logs"
+  qc: "results/qc"
+  salmon: "results/salmon"
+  counts: "results/counts"
+  de: "results/de"
+  fgsea: "results/fgsea"
+  report_dir: "results"
+containers:
+  enabled: false
+  image: "ghcr.io/example/rnaseq-mini:latest"
+cache:
+  enabled: true
+  dir: ".cache"
+  max_age_days: 30
+singlecell:
+  enabled: false              # Enable single-cell analysis mode
+  technology: "auto"          # auto, 10x, dropseq, smartseq, spatial
+  chemistry: "auto"           # auto, v2, v3 for 10x
+
+  # Quantification parameters
+  quantification:
+    method: "auto"            # auto, cellranger, kallisto, starsolo, alevin
+    min_umi: 500
+    min_genes: 200
+    max_mito_percent: 10.0
+    include_introns: true
+    estimate_complexity: true
+
+  # Quality control parameters
+  qc:
+    adapter_trimming: true
+    poly_a_trimming: true
+    quality_filtering: true
+    min_genes_per_cell: 200
+    max_genes_per_cell: 6000
+    mito_percent_threshold: 10.0
+
+  # Clustering parameters
+  clustering:
+    normalization_method: "log_normalize"  # log_normalize, scran, sct
+    n_pcs: 50
+    n_neighbors: 10
+    resolution: 1.0
+    clustering_method: "leiden"            # leiden, louvain, kmeans
+
+  # Annotation parameters
+  annotation:
+    method: "auto"            # auto, celltypist, scpred, manual
+    reference: "auto"         # auto, human, mouse, custom
+    marker_genes: null
+
+  # Visualization parameters
+  visualization:
+    save_plots: true
+    plot_formats: ["png", "pdf", "svg"]
+    color_by: ["leiden", "condition", "sample"]
+    n_markers: 20
+
+  # Output paths
+  paths:
+    quantification: "results/singlecell/quantification"
+    qc: "results/singlecell/qc"
+    clustering: "results/singlecell/clustering"
+    annotation: "results/singlecell/annotation"
+    visualization: "results/singlecell/visualization"
+    report: "results/singlecell/report"
+
+  # Performance parameters
+  threads: 8
+  memory_gb: 32
+
+  # Advanced parameters
+  integration:
+    enabled: false
+    method: "harmony"         # harmony, scanorama, bbknn
+
+  # Spatial transcriptomics (if applicable)
+  spatial:
+    enabled: false
+    technology: "auto"        # auto, visium, slideseq, merfish
+
+# Dynamic resource optimization
+optimization:
+  enabled: false              # Enable dynamic resource optimization
+  auto_estimate: true         # Automatically estimate resources from samples.tsv
+  adaptive_scaling: true      # Enable adaptive scaling during execution
+
+  # Resource estimation parameters
+  estimation:
+    base_cores: 4
+    base_memory_gb: 16
+    complexity_multiplier: 1.5
+    size_multiplier: 1.2
+    min_cores: 1
+    max_cores: 32
+    min_memory_gb: 4
+    max_memory_gb: 128
+
+  # Cloud optimization
+  cloud:
+    enabled: false
+    provider: "aws"           # aws, gcp, azure
+    region: "us-east-1"
+
+    # Auto-scaling configuration
+    autoscaling:
+      enabled: true
+      min_vcpus: 0
+      max_vcpus: 256
+      scale_up_threshold: 0.8   # Scale up when >80% utilization
+      scale_down_threshold: 0.3  # Scale down when <30% utilization
+      scale_up_factor: 1.5
+      scale_down_factor: 0.7
+      cooldown_minutes: 5
+
+    # Cost monitoring
+    cost_monitoring:
+      enabled: true
+      budget_alert_threshold: 0.8  # Alert when 80% of budget reached
+      report_frequency_days: 7
+
+# Resource allocation profiles
+resource_profiles:
+  small:    # < 10 samples, < 1GB total
+    cores: 4
+    memory_gb: 8
+    runtime_hours: 2
+
+  medium:   # 10-50 samples, 1-10GB total
+    cores: 8
+    memory_gb: 16
+    runtime_hours: 6
+
+  large:    # 50-200 samples, 10-50GB total
+    cores: 16
+    memory_gb: 32
+    runtime_hours: 12
+
+  xlarge:   # > 200 samples, > 50GB total
+    cores: 32
+    memory_gb: 64
+    runtime_hours: 24
+
+# Error handling and troubleshooting
+error_handling:
+  enabled: true              # Enable intelligent error handling
+  auto_retry: true           # Automatically retry failed operations
+  max_retries: 3            # Maximum retry attempts
+  retry_delay: 30           # Delay between retries (seconds)
+  solution_timeout: 300     # Timeout for solution execution (seconds)
+
+troubleshooting:
+  health_check_interval: 30  # Health check interval (seconds)
+  auto_fix_enabled: true     # Enable automatic fixes
+  diagnostic_level: "comprehensive"  # basic, standard, comprehensive
+  report_format: "markdown"  # markdown, html, json
+
+profiles:
+  snakemake: "config/profiles/local.smk.yaml"
+  nextflow: "config/profiles/local.nf.config"

@@ -1,0 +1,140 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "rnaseq-mini.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "rnaseq-mini.labels" . | nindent 4 }}
+    app: rnaseq-mini
+    component: pipeline
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "rnaseq-mini.selectorLabels" . | nindent 6 }}
+      app: rnaseq-mini
+      component: pipeline
+  template:
+    metadata:
+      labels:
+        {{- include "rnaseq-mini.selectorLabels" . | nindent 8 }}
+        app: rnaseq-mini
+        component: pipeline
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+    spec:
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: rnaseq-mini
+        image: {{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.service.targetPort }}
+          name: web
+          protocol: TCP
+        - containerPort: 8001
+          name: api
+          protocol: TCP
+        env:
+        {{- range $key, $value := .Values.env }}
+        - name: {{ $key }}
+          value: {{ $value | quote }}
+        {{- end }}
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: POD_NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 10 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 10 }}
+        volumeMounts:
+        - name: results-storage
+          mountPath: /app/results
+        - name: cache-storage
+          mountPath: /app/.cache
+        - name: data-storage
+          mountPath: /app/data
+        - name: config-volume
+          mountPath: /app/config/params.yaml
+          subPath: params.yaml
+          readOnly: true
+        {{- if .Values.config.secret.enabled }}
+        - name: secret-volume
+          mountPath: /app/config/secrets
+          readOnly: true
+        {{- end }}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.service.targetPort }}
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        readinessProbe:
+          httpGet:
+            path: /api/v1/status
+            port: {{ .Values.service.targetPort }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+          successThreshold: 1
+        startupProbe:
+          httpGet:
+            path: /health
+            port: {{ .Values.service.targetPort }}
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+          successThreshold: 1
+      volumes:
+      - name: results-storage
+        persistentVolumeClaim:
+          claimName: {{ include "rnaseq-mini.fullname" . }}-results
+      - name: cache-storage
+        persistentVolumeClaim:
+          claimName: {{ include "rnaseq-mini.fullname" . }}-cache
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: {{ include "rnaseq-mini.fullname" . }}-data
+      - name: config-volume
+        configMap:
+          name: {{ include "rnaseq-mini.fullname" . }}-config
+      {{- if .Values.config.secret.enabled }}
+      - name: secret-volume
+        secret:
+          secretName: {{ include "rnaseq-mini.fullname" . }}-secret
+      {{- end }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+
+
+
+

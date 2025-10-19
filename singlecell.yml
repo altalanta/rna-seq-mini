@@ -1,0 +1,40 @@
+name: rnaseq-mini-singlecell
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core Python packages
+  - python>=3.8
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+
+  # Single-cell specific packages
+  - scanpy>=1.9.0
+  - anndata>=0.8.0
+  - leidenalg
+  - python-igraph
+
+  # Quantification tools
+  - kallisto>=0.46.0
+  - bustools>=0.40.0
+  - cellranger>=7.0.0
+
+  # STARsolo (for STAR-based quantification)
+  - star>=2.7.0
+
+  # R packages (for integration)
+  - r-base>=4.1.0
+  - r-seurat
+  - r-sctransform
+  - r-scran
+  - r-biocmanager
+
+  # Utility packages
+  - tqdm
+  - logging
