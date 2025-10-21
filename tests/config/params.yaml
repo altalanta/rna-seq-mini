@@ -1,0 +1,55 @@
+project: "rnaseq-mini-smoke"
+engine: "snakemake"
+se: false
+threads: 2
+memory_gb: 4
+organism: "yeast"
+reference:
+  transcripts_fa: "references/yeast/transcripts.fa.gz"
+  annotation_gtf: "references/yeast/annotation.gtf.gz"
+  decoy_fasta: "references/yeast/decoys.fa.gz"
+  salmon_index: "references/yeast/salmon_index"
+fastqc:
+  extra: ""
+multiqc:
+  title: "RNA-seq QC"
+salmon:
+  libtype: "A"
+  extra: "--validateMappings"
+  threads: 2
+r:
+  design: "~ condition"
+  contrast_variable: "condition"
+  batch_column: "batch"
+  alpha: 0.1
+  lfc_shrink: false
+  contrasts_file: "config/contrasts.tsv"
+  gene_id_column: "gene_id"
+  pvalue_adjust: "BH"
+fgsea:
+  genesets: null
+  min_size: 1
+  max_size: 50
+  nperm: 100
+  padj_cutoff: 0.25
+  score_column: "log2FoldChange"
+report:
+  author: "CI Runner"
+  title: "RNA-seq Analysis Report"
+  output_html: "results/report.html"
+paths:
+  samples: "config/samples.tsv"
+  outdir: "results"
+  logs: "logs"
+  qc: "results/qc"
+  salmon: "results/salmon"
+  counts: "results/counts"
+  de: "results/de"
+  fgsea: "results/fgsea"
+  report_dir: "results"
+containers:
+  enabled: false
+  image: "ghcr.io/example/rnaseq-mini:latest"
+profiles:
+  snakemake: "config/profiles/local.smk.yaml"
+  nextflow: "config/profiles/local.nf.config"

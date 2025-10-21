@@ -9,12 +9,10 @@ THREADS:=$(shell python -c 'import yaml;print(yaml.safe_load(open("$(PARAMS)")).
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-setup: ## Create Conda environments and install pre-commit
-	@mamba env create -f envs/base.yml || conda env create -f envs/base.yml
-	@mamba env create -f envs/qc.yml || conda env create -f envs/qc.yml
-	@mamba env create -f envs/salmon.yml || conda env create -f envs/salmon.yml
-	@mamba env create -f envs/r.yml || conda env create -f envs/r.yml
-	@conda run -n $(PY_ENV) pre-commit install
+setup: ## Create consolidated Conda environments and install pre-commit
+	@mamba env create -f envs/rnaseq-core.yml || conda env create -f envs/rnaseq-core.yml
+	@mamba env create -f envs/rnaseq-analysis.yml || conda env create -f envs/rnaseq-analysis.yml
+	@conda run -n rnaseq-mini-core pre-commit install
 
 setup-singlecell: ## Install single-cell analysis dependencies
 	@pip install -r requirements-singlecell.txt
@@ -312,12 +310,29 @@ troubleshoot: ## Analyze and classify error messages
 health-check: ## Perform one-time system and pipeline health check
 	@conda run -n $(PY_ENV) python scripts/troubleshooter.py --health-check
 
+env-health: ## Validate environment integrity and check for missing dependencies
+	@echo "🔍 Checking environment health..."
+	@echo "Core environment (rnaseq-mini-core):"
+	@conda run -n rnaseq-mini-core python -c "import snakemake, nextflow, pandas, yaml; print('✅ Core Python tools OK')" 2>/dev/null || echo "❌ Core environment issues"
+	@conda run -n rnaseq-mini-core which fastqc multiqc salmon samtools 2>/dev/null | head -5 | wc -l | xargs -I {} echo "✅ Found {} QC/quantification tools" 2>/dev/null || echo "❌ Missing QC/quantification tools"
+	@echo ""
+	@echo "Analysis environment (rnaseq-mini-analysis):"
+	@conda run -n rnaseq-mini-analysis R -e "library(DESeq2); library(tximport); print('✅ R analysis tools OK')" 2>/dev/null || echo "❌ R environment issues"
+	@conda run -n rnaseq-mini-analysis python -c "import scanpy, anndata, numpy; print('✅ Single-cell tools OK')" 2>/dev/null || echo "❌ Single-cell tools issues"
+	@echo ""
+	@echo "Environment health check complete."
+
 monitor-health: ## Monitor system health for specified duration
 	@conda run -n $(PY_ENV) python scripts/troubleshooter.py --monitor $(DURATION_MINUTES) --interval 30
 
 error-recovery: ## Attempt error recovery for failed jobs
 	@echo "Error recovery system initialized"
 	@echo "Run 'make troubleshoot' with specific error messages for detailed analysis"
+
+cleanup-duplicates: ## Remove duplicate files with ' 2' suffix
+	@echo "Cleaning up duplicate files..."
+	@find . -name "* 2*" -type f -delete
+	@echo "Removed duplicate files. Repository cleaned."
 
 clean: ## Remove results and temporary state
 	@rm -rf results logs .snakemake .nextflow* work
