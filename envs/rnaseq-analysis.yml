@@ -1,0 +1,56 @@
+name: rnaseq-mini-analysis
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # R environment
+  - r-base=4.3
+  - r-optparse
+  - r-tidyverse
+  - r-yaml
+  - r-data.table
+  - r-jsonlite
+  - r-ggplot2
+  - r-pheatmap
+  - r-patchwork
+  - bioconductor-deseq2
+  - bioconductor-tximport
+  - bioconductor-tximportdata
+  - bioconductor-annotationdbi
+  - bioconductor-org.hs.eg.db
+  - bioconductor-org.sc.sgd.db
+  - bioconductor-biomart
+  - bioconductor-fgsea
+  - bioconductor-apeglm
+  - bioconductor-ensembldb
+  - r-rmarkdown
+  - r-quarto
+  - pandoc
+
+  # Single-cell analysis tools
+  - python>=3.8
+  - pip
+  - numpy
+  - pandas
+  - scipy
+  - matplotlib
+  - seaborn
+  - scikit-learn
+  - scanpy>=1.9.0
+  - anndata>=0.8.0
+  - leidenalg
+  - python-igraph
+  - kallisto>=0.46.0
+  - bustools>=0.40.0
+  - cellranger>=7.0.0
+  - star>=2.7.0
+  - r-seurat
+  - r-sctransform
+  - r-scran
+  - r-biocmanager
+  - tqdm
+  - logging
+
+  # Additional utilities
+  - openjdk
