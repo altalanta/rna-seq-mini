@@ -78,6 +78,7 @@ SEQUENCING_MODE = "single" if sample_is_single_end(config) else "paired"
 include: "rules/qc.smk"
 include: "rules/salmon.smk"
 include: "rules/tximport_de.smk"
+include: "rules/singlecell.smk"
 include: "rules/report.smk"
 
 rule all:
@@ -90,4 +91,6 @@ rule all:
         COUNTS_DIR / "tpm.tsv",
         DE_DIR / "de_summary.tsv",
         expand(DE_DIR / "DE_{label}.tsv", label=CONTRAST_LABELS),
-        FGSEA_DIR / "fgsea_summary.tsv"
+        FGSEA_DIR / "fgsea_summary.tsv",
+        # Single-cell outputs (if enabled)
+        SINGLECELL_DIR / ".singlecell_complete" if config.get("singlecell", {}).get("enabled", False) else []
