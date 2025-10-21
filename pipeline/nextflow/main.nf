@@ -14,6 +14,7 @@ try {
 include { FASTQC; MULTIQC } from './modules/qc.nf'
 include { SALMON_INDEX; SALMON_QUANT } from './modules/salmon.nf'
 include { TXIMPORT_DESEQ2; FGSEA } from './modules/tximport_de.nf'
+include { SINGLECELL_ANALYSIS } from './modules/singlecell.nf'
 include { REPORT } from './modules/report.nf'
 
 params.project = params.project ?: 'rnaseq-mini'
@@ -30,6 +31,16 @@ params.reference.salmon_index = params.reference.salmon_index ?: 'references/yea
 params.r = params.r ?: [:]
 params.r.contrasts_file = params.r.contrasts_file ?: 'config/contrasts.tsv'
 params.se = params.se ?: false
+
+// Single-cell parameters
+params.singlecell = params.singlecell ?: [:]
+params.singlecell.enabled = params.singlecell.enabled ?: false
+params.singlecell.technology = params.singlecell.technology ?: 'auto'
+params.singlecell.method = params.singlecell.method ?: 'auto'
+params.singlecell.chemistry = params.singlecell.chemistry ?: 'auto'
+params.singlecell.min_genes = params.singlecell.min_genes ?: 200
+params.singlecell.max_genes = params.singlecell.max_genes ?: 6000
+params.singlecell.mito_threshold = params.singlecell.mito_threshold ?: 10.0
 
 workflow {
     samples_file = file(params.paths.samples)
@@ -70,5 +81,18 @@ workflow {
 
     fgsea = FGSEA(tximport.out.de_dir, contrast_file_ch)
 
-    report = REPORT(multiqc.out, tximport.out.counts_dir, tximport.out.de_dir, fgsea.out.fgsea_dir)
+    // Single-cell analysis (if enabled)
+    if (params.singlecell.enabled) {
+        // Prepare transcript-to-gene mapping for kallisto|bustools
+        t2g_file = file("${params.reference.transcripts_fa}".replace('.fa.gz', '_t2g.txt'))
+
+        singlecell_results = SINGLECELL_ANALYSIS(samples_ch, params.reference.salmon_index, t2g_file)
+
+        // Include single-cell results in report
+        report = REPORT(multiqc.out, tximport.out.counts_dir, tximport.out.de_dir,
+                       fgsea.out.fgsea_dir, singlecell_results.qc_reports.collect(),
+                       singlecell_results.clustering_results.collect())
+    } else {
+        report = REPORT(multiqc.out, tximport.out.counts_dir, tximport.out.de_dir, fgsea.out.fgsea_dir)
+    }
 }

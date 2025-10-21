@@ -1,0 +1,101 @@
+# Example configuration for single-cell RNA-seq analysis
+# Copy this file to params.yaml and modify as needed
+
+project: "rnaseq-mini-singlecell"
+engine: "snakemake"        # snakemake or nextflow
+se: false                   # single-end reads if true
+threads: 8
+memory_gb: 32
+organism: "human"          # or mouse, etc.
+
+reference:
+  transcripts_fa: "references/human/transcripts.fa.gz"
+  annotation_gtf: "references/human/annotation.gtf.gz"
+  decoy_fasta: "references/human/decoys.fa.gz"
+  salmon_index: "references/human/salmon_index"
+  auto_download: true
+
+# Single-cell analysis configuration
+singlecell:
+  enabled: true              # Enable single-cell analysis mode
+  technology: "10x"          # 10x, dropseq, smartseq, spatial
+  chemistry: "auto"          # auto, v2, v3 for 10x
+
+  # Quantification parameters
+  quantification:
+    method: "cellranger"     # cellranger, kallisto, starsolo, alevin
+    min_umi: 500
+    min_genes: 200
+    max_mito_percent: 10.0
+    include_introns: true
+
+  # Quality control parameters
+  qc:
+    adapter_trimming: true
+    poly_a_trimming: true
+    quality_filtering: true
+    min_genes_per_cell: 200
+    max_genes_per_cell: 6000
+    mito_percent_threshold: 10.0
+
+  # Clustering parameters
+  clustering:
+    normalization_method: "log_normalize"  # log_normalize, scran, sct
+    n_pcs: 50
+    n_neighbors: 10
+    resolution: 1.0
+    clustering_method: "leiden"            # leiden, louvain, kmeans
+
+  # Output paths
+  paths:
+    quantification: "results/singlecell/quantification"
+    qc: "results/singlecell/qc"
+    clustering: "results/singlecell/clustering"
+    annotation: "results/singlecell/annotation"
+    visualization: "results/singlecell/visualization"
+
+  # Performance parameters
+  threads: 8
+  memory_gb: 32
+
+# Standard bulk RNA-seq parameters (used for comparison or multi-modal analysis)
+fastqc:
+  extra: ""
+multiqc:
+  title: "Single-Cell RNA-seq QC"
+salmon:
+  libtype: "A"
+  extra: "--validateMappings --gcBias"
+  threads: 4
+r:
+  design: "~ condition"
+  contrast_variable: "condition"
+  alpha: 0.05
+  lfc_shrink: true
+  contrasts_file: "config/contrasts.tsv"
+  gene_id_column: "gene_id"
+  pvalue_adjust: "BH"
+fgsea:
+  genesets: null
+  min_size: 1
+  max_size: 200
+  nperm: 1000
+  padj_cutoff: 0.1
+  score_column: "log2FoldChange"
+report:
+  author: "Single-Cell Analysis Team"
+  title: "Single-Cell RNA-seq Analysis Report"
+  output_html: "results/singlecell/report.html"
+paths:
+  samples: "config/samples.tsv"
+  outdir: "results"
+  logs: "logs"
+  qc: "results/qc"
+  salmon: "results/salmon"
+  counts: "results/counts"
+  de: "results/de"
+  fgsea: "results/fgsea"
+  report_dir: "results"
+
+
+
