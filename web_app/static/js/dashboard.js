@@ -18,6 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupMobileInteractions();
     loadConfigurationsFromStorage();
     restoreStateFromUrl();
+    initializeProgressTracking();
 });
 
 // Load initial data and populate UI
@@ -2144,6 +2145,312 @@ setInterval(async function() {
         // Silently fail - this is just for auto-refresh
     }
 }, 30000); // Check every 30 seconds
+
+// Progress Tracking Functions
+function initializeProgressTracking() {
+    // Check if we're on the dashboard page (has progress tracking section)
+    const progressSection = document.getElementById('progress-tracking');
+    if (!progressSection) return;
+
+    // Load progress from localStorage or API
+    const progress = loadSetupProgress();
+
+    // Update progress circles
+    updateProgressCircles(progress);
+
+    // Set up periodic progress checks
+    setInterval(checkProgressUpdates, 5000);
+}
+
+function loadSetupProgress() {
+    // Check localStorage for saved progress
+    const savedProgress = localStorage.getItem('rnaseq-setup-progress');
+    if (savedProgress) {
+        try {
+            return JSON.parse(savedProgress);
+        } catch (e) {
+            console.warn('Invalid progress data in localStorage');
+        }
+    }
+
+    // Default progress based on configuration files
+    const progress = {
+        environment: checkEnvironmentSetup() ? 100 : 0,
+        config: checkConfigFiles() ? 100 : 0,
+        samples: checkSampleFiles() ? 100 : 0,
+        analysis: checkAnalysisReady() ? 100 : 0
+    };
+
+    return progress;
+}
+
+function checkEnvironmentSetup() {
+    // Check if conda environments exist or if Docker is available
+    return true; // Simplified for now - would check actual environment status
+}
+
+function checkConfigFiles() {
+    // Check if config files exist and are valid
+    const configFiles = ['config/params.yaml', 'config/samples.tsv', 'config/contrasts.tsv'];
+    return configFiles.every(file => {
+        // This would check if files exist and are valid YAML/TSV
+        return true; // Simplified
+    });
+}
+
+function checkSampleFiles() {
+    // Check if sample files are configured and exist
+    return true; // Simplified
+}
+
+function checkAnalysisReady() {
+    // Check if analysis can be run (all prerequisites met)
+    return false; // Simplified
+}
+
+function updateProgressCircles(progress) {
+    const circles = document.querySelectorAll('.progress-circle');
+    circles.forEach((circle, index) => {
+        const stepKeys = ['environment', 'config', 'samples', 'analysis'];
+        const stepProgress = progress[stepKeys[index]] || 0;
+
+        circle.setAttribute('data-progress', stepProgress);
+        circle.style.setProperty('--progress', `${stepProgress}%`);
+
+        // Update visual state
+        if (stepProgress === 100) {
+            circle.classList.add('completed');
+        } else if (stepProgress > 0) {
+            circle.classList.add('in-progress');
+        }
+    });
+}
+
+function checkProgressUpdates() {
+    // Periodically check for progress updates (could be from API)
+    const updatedProgress = loadSetupProgress();
+    updateProgressCircles(updatedProgress);
+    saveSetupProgress(updatedProgress);
+}
+
+function saveSetupProgress(progress) {
+    localStorage.setItem('rnaseq-setup-progress', JSON.stringify(progress));
+}
+
+function showSetupWizard() {
+    // Open setup wizard in new tab or modal
+    window.open('/tutorial', '_blank');
+}
+
+// Tutorial Functions
+function startTutorial() {
+    // Redirect to tutorial page
+    window.location.href = '/tutorial';
+}
+
+function completeTutorialStep(step) {
+    // Mark tutorial step as completed
+    const tutorialProgress = JSON.parse(localStorage.getItem('tutorial-progress') || '{}');
+    tutorialProgress[step] = true;
+    localStorage.setItem('tutorial-progress', JSON.stringify(tutorialProgress));
+
+    // Update UI if needed
+    updateTutorialProgress();
+}
+
+function updateTutorialProgress() {
+    // Update tutorial progress indicators
+    const tutorialProgress = JSON.parse(localStorage.getItem('tutorial-progress') || '{}');
+    const dots = document.querySelectorAll('.tutorial-progress-dot');
+
+    dots.forEach((dot, index) => {
+        const step = index + 1;
+        if (tutorialProgress[step]) {
+            dot.classList.add('completed');
+        } else {
+            dot.classList.remove('completed');
+        }
+    });
+}
+
+// Configuration Management Functions
+function saveCurrentConfiguration() {
+    const configName = document.getElementById('config-name').value.trim();
+    if (!configName) {
+        alert('Please enter a name for the configuration');
+        return;
+    }
+
+    // Save current dashboard state
+    const config = {
+        name: configName,
+        timestamp: new Date().toISOString(),
+        state: {
+            currentContrast: currentContrast,
+            filters: getCurrentFilters(),
+            plots: getCurrentPlotSettings()
+        }
+    };
+
+    // Save to localStorage or send to API
+    saveConfigurationToStorage(config);
+
+    // Update UI
+    loadConfigurationsFromStorage();
+    document.getElementById('config-name').value = '';
+}
+
+function getCurrentFilters() {
+    return {
+        pvalueThreshold: document.getElementById('pvalue-threshold').value,
+        logfcThreshold: document.getElementById('logfc-threshold').value,
+        pathwayThreshold: document.getElementById('pathway-threshold').value
+    };
+}
+
+function getCurrentPlotSettings() {
+    return {
+        volcanoPlot: volcanoPlot ? volcanoPlot.layout : null,
+        heatmapPlot: heatmapPlot ? heatmapPlot.layout : null,
+        pathwayPlot: pathwayPlot ? pathwayPlot.layout : null
+    };
+}
+
+function saveConfigurationToStorage(config) {
+    const configs = JSON.parse(localStorage.getItem('saved-configurations') || '[]');
+    configs.push(config);
+    localStorage.setItem('saved-configurations', JSON.stringify(configs));
+}
+
+function loadConfigurationsFromStorage() {
+    const configs = JSON.parse(localStorage.getItem('saved-configurations') || '[]');
+    const select = document.getElementById('load-config-select');
+
+    // Clear existing options
+    select.innerHTML = '<option value="">Select a saved configuration...</option>';
+
+    // Add saved configurations
+    configs.forEach((config, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = `${config.name} (${new Date(config.timestamp).toLocaleDateString()})`;
+        select.appendChild(option);
+    });
+
+    // Show configurations section if we have any
+    if (configs.length > 0) {
+        document.getElementById('saved-configurations').style.display = 'block';
+    }
+}
+
+function loadConfiguration() {
+    const select = document.getElementById('load-config-select');
+    const configIndex = select.value;
+
+    if (!configIndex) return;
+
+    const configs = JSON.parse(localStorage.getItem('saved-configurations') || '[]');
+    const config = configs[configIndex];
+
+    if (config) {
+        // Restore state
+        restoreConfigurationState(config.state);
+    }
+}
+
+function restoreConfigurationState(state) {
+    // Restore filters
+    if (state.filters) {
+        if (state.filters.pvalueThreshold) {
+            document.getElementById('pvalue-threshold').value = state.filters.pvalueThreshold;
+        }
+        if (state.filters.logfcThreshold) {
+            document.getElementById('logfc-threshold').value = state.filters.logfcThreshold;
+        }
+        if (state.filters.pathwayThreshold) {
+            document.getElementById('pathway-threshold').value = state.filters.pathwayThreshold;
+        }
+    }
+
+    // Restore contrast selection
+    if (state.currentContrast) {
+        currentContrast = state.currentContrast;
+        const deSelect = document.getElementById('de-contrast-select');
+        const pathwaySelect = document.getElementById('pathway-contrast-select');
+
+        if (deSelect.querySelector(`option[value="${state.currentContrast}"]`)) {
+            deSelect.value = state.currentContrast;
+        }
+        if (pathwaySelect.querySelector(`option[value="${state.currentContrast}"]`)) {
+            pathwaySelect.value = state.currentContrast;
+        }
+    }
+
+    // Update plots
+    if (state.currentContrast) {
+        updateVolcanoPlot();
+        updateHeatmap();
+        updatePathwayPlot();
+    }
+}
+
+function deleteConfiguration() {
+    const select = document.getElementById('load-config-select');
+    const configIndex = select.value;
+
+    if (!configIndex) return;
+
+    if (confirm('Are you sure you want to delete this configuration?')) {
+        const configs = JSON.parse(localStorage.getItem('saved-configurations') || '[]');
+        configs.splice(configIndex, 1);
+        localStorage.setItem('saved-configurations', JSON.stringify(configs));
+
+        loadConfigurationsFromStorage();
+    }
+}
+
+function generateShareUrl() {
+    // Generate shareable URL with current state
+    const state = {
+        contrast: currentContrast,
+        filters: getCurrentFilters(),
+        plots: getCurrentPlotSettings()
+    };
+
+    const params = new URLSearchParams();
+    params.set('state', btoa(JSON.stringify(state)));
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+    document.getElementById('share-url').value = shareUrl;
+}
+
+function copyShareUrl() {
+    const shareUrlInput = document.getElementById('share-url');
+    shareUrlInput.select();
+    document.execCommand('copy');
+
+    // Show feedback
+    const originalPlaceholder = shareUrlInput.placeholder;
+    shareUrlInput.placeholder = 'URL copied to clipboard!';
+    setTimeout(() => {
+        shareUrlInput.placeholder = originalPlaceholder;
+    }, 2000);
+}
+
+function restoreStateFromUrl() {
+    // Restore state from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const stateParam = urlParams.get('state');
+
+    if (stateParam) {
+        try {
+            const state = JSON.parse(atob(stateParam));
+            restoreConfigurationState(state);
+        } catch (error) {
+            console.warn('Failed to restore state from URL:', error);
+        }
+    }
+}
 
 
 

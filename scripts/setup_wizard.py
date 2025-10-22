@@ -115,14 +115,23 @@ class SetupWizard:
 
         return None, []
 
-    def configure_project(self):
+    def configure_project(self, workflow_type):
         """Step 1: Basic project configuration."""
         self._print_header("Project Configuration")
 
         print("Let's start by configuring your analysis project.")
 
+        # Set workflow-specific project name defaults
+        workflow_defaults = {
+            "standard": "my-rnaseq-analysis",
+            "singlecell": "my-singlecell-analysis",
+            "multiomics": "my-multiomics-study",
+            "custom": "my-advanced-analysis"
+        }
+
+        project_default = workflow_defaults.get(workflow_type, "my-rnaseq-analysis")
         self.default_params["project"] = self._ask_question(
-            "Project name", self.default_params["project"]
+            "Project name", project_default
         )
 
         self.default_params["author"] = self._ask_question(
@@ -159,11 +168,18 @@ class SetupWizard:
         ))
         self.default_params["memory_gb"] = memory
 
-    def configure_samples(self):
+    def configure_samples(self, workflow_type):
         """Step 2: Sample configuration."""
         self._print_header("Sample Configuration")
 
         print("Now let's configure your samples. I can help auto-detect FASTQ files.")
+
+        # Workflow-specific guidance
+        if workflow_type == "singlecell":
+            print("💡 For single-cell analysis, ensure you have 10x Genomics or compatible data.")
+            print("   Expected files: sample_R1.fastq.gz, sample_R2.fastq.gz (paired-end)")
+        elif workflow_type == "multiomics":
+            print("💡 For multi-omics, you may need additional data types (ATAC-seq, proteomics).")
 
         # Try to auto-detect FASTQ files
         data_dir, sample_files = self._detect_fastq_files()
@@ -296,11 +312,27 @@ class SetupWizard:
 
         print(f"✅ Configured for {organism}")
 
-    def configure_analysis_options(self):
+    def configure_analysis_options(self, workflow_type):
         """Step 5: Advanced analysis options."""
         self._print_header("Analysis Options")
 
         print("Configure advanced analysis options:")
+
+        # Workflow-specific options
+        if workflow_type == "singlecell":
+            print("🔬 Single-cell specific options:")
+            technology = self._ask_question(
+                "Single-cell technology (10x, dropseq, smartseq)",
+                "10x"
+            )
+            self.default_params["singlecell"] = {"technology": technology}
+        elif workflow_type == "multiomics":
+            print("🔬 Multi-omics specific options:")
+            multiomics_types = self._ask_question(
+                "Additional data types (ATAC, proteomics, metabolomics)",
+                "ATAC"
+            )
+            self.default_params["multiomics"] = {"types": multiomics_types.split(",")}
 
         # Single-end vs paired-end
         se = not self._ask_yes_no(
@@ -369,11 +401,14 @@ class SetupWizard:
         )
         self.default_params["report"]["title"] = report_title
 
-    def generate_configuration(self):
+    def generate_configuration(self, workflow_type):
         """Generate final configuration files."""
         self._print_header("Generating Configuration")
 
         print("Generating configuration files...")
+
+        # Add workflow type to configuration
+        self.default_params["workflow_type"] = workflow_type
 
         # Create params.yaml
         params_file = self.config_dir / "params.yaml"
@@ -404,7 +439,7 @@ class SetupWizard:
         print("4. Check 'docs/workflow.md' for detailed workflow information")
 
     def run(self):
-        """Run the complete setup wizard."""
+        """Run the complete setup wizard with guided workflows."""
         print("🔬 RNASEQ-MINI Setup Wizard")
         print("=" * 60)
         print("This wizard will help you configure your RNA-seq analysis pipeline.")
@@ -414,14 +449,17 @@ class SetupWizard:
             print("Setup cancelled.")
             return
 
+        # Choose analysis workflow type
+        workflow_type = self._choose_workflow_type()
+
         try:
-            self.configure_project()
-            self.configure_samples()
-            self.configure_contrasts()
-            self.configure_organism()
-            self.configure_analysis_options()
-            self.configure_advanced_features()
-            self.generate_configuration()
+            self.configure_project(workflow_type)
+            self.configure_samples(workflow_type)
+            self.configure_contrasts(workflow_type)
+            self.configure_organism(workflow_type)
+            self.configure_analysis_options(workflow_type)
+            self.configure_advanced_features(workflow_type)
+            self.generate_configuration(workflow_type)
 
         except KeyboardInterrupt:
             print("\n\nSetup interrupted by user.")
@@ -429,6 +467,39 @@ class SetupWizard:
         except Exception as e:
             print(f"\n❌ Setup failed: {e}")
             return
+
+    def _choose_workflow_type(self):
+        """Choose the analysis workflow type."""
+        print("\n🔬 Choose Your Analysis Type")
+        print("=" * 40)
+
+        print("Select the type of RNA-seq analysis you want to perform:")
+        print("1. Standard RNA-seq (differential expression)")
+        print("2. Single-cell RNA-seq")
+        print("3. Multi-omics integration")
+        print("4. Custom/advanced analysis")
+
+        choices = ["1", "2", "3", "4"]
+        choice = self._ask_question("Enter your choice", options=choices)
+
+        workflow_types = {
+            "1": "standard",
+            "2": "singlecell",
+            "3": "multiomics",
+            "4": "custom"
+        }
+
+        workflow_type = workflow_types[choice]
+        print(f"\n🔬 Selected workflow: {workflow_type}")
+
+        if workflow_type == "singlecell":
+            print("💡 Tip: Single-cell analysis requires 10x Genomics or similar data.")
+        elif workflow_type == "multiomics":
+            print("💡 Tip: Multi-omics integrates RNA-seq with ATAC-seq, proteomics, etc.")
+        elif workflow_type == "custom":
+            print("💡 Tip: Custom workflows allow maximum flexibility for specialized analyses.")
+
+        return workflow_type
 
 
 def main():

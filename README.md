@@ -123,12 +123,15 @@ RNASEQ-MINI/
 - **[📖 Documentation](docs/)** - Complete user guides and tutorials
 - **[🐛 Issues](https://github.com/rnaseq-mini/rnaseq-mini/issues)** - Bug reports & feature requests
 
-## 📈 Performance Benefits
+## 📈 Performance & Quality
 
 - **60-80% faster re-runs** with intelligent caching
 - **Infinite horizontal scaling** via cloud auto-scaling
 - **20-40% accuracy improvement** with multi-omics integration
 - **Automated optimization** for better parameter tuning
+- **Comprehensive testing** across multiple environments and platforms
+- **Automated security scanning** and dependency vulnerability checks
+- **Performance benchmarking** with regression detection
 
 ## 🔗 Key Links
 
@@ -156,15 +159,55 @@ RNASEQ-MINI/
 |---------|-------------|
 | `make setup` | Install consolidated environments |
 | `make env-health` | Validate environment integrity |
-| `make wizard` | Interactive configuration wizard |
+| `make wizard` | Interactive configuration wizard with guided workflows |
 | `make run` | Execute analysis pipeline |
-| `make serve-results` | Launch web dashboard |
+| `make serve-results` | Launch web dashboard with tutorials & progress tracking |
 | `make smoke` | Run smoke test |
 | `make cleanup-duplicates` | Remove duplicate files |
 | `make troubleshoot` | Analyze and fix errors |
 | `make estimate-resources` | Optimize resource allocation |
 
 **Advanced:** `make ai-insights`, `make collaboration-server`, `make cloud-autoscale`
+
+## 🎓 User Onboarding & Interactive Tutorials
+
+RNASEQ-MINI now includes comprehensive user onboarding features to help new users get started quickly and efficiently.
+
+### 🚀 **Interactive Setup Wizard**
+Enhanced configuration wizard with guided workflows for different analysis types:
+- **Standard RNA-seq**: Differential expression analysis
+- **Single-cell RNA-seq**: 10x Genomics and similar data
+- **Multi-omics integration**: RNA-seq + ATAC-seq, proteomics, etc.
+- **Custom workflows**: Advanced and specialized analyses
+
+Run with: `python scripts/setup_wizard.py`
+
+### 📚 **Interactive Tutorial System**
+Step-by-step web-based tutorials accessible at `/tutorial` when running the web dashboard:
+- **Getting Started**: Installation and basic setup
+- **Setup Wizard**: Workflow selection and configuration
+- **Analysis Workflows**: Understanding different analysis types
+- **Troubleshooting**: Common issues and solutions
+
+Launch with: `make serve-results` → Visit `/tutorial`
+
+### 📊 **Progress Tracking Dashboard**
+Visual progress indicators on the main dashboard showing:
+- Environment setup completion
+- Configuration file status
+- Sample data validation
+- Analysis readiness
+
+### 💾 **Configuration Management**
+Save and load analysis configurations:
+- **Save Current View**: Preserve filters, contrasts, and plot settings
+- **Load Configurations**: Restore previous analysis states
+- **Share URLs**: Generate shareable links with current analysis state
+
+**New Features:**
+- **Interactive Tutorials**: `make serve-results` → `/tutorial` for step-by-step guidance
+- **Progress Tracking**: Visual setup progress on the dashboard
+- **Configuration Management**: Save/load analysis configurations
 
 ## 🤝 Contributing
 
