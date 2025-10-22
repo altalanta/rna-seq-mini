@@ -40,3 +40,4 @@ dependencies:
   # Pip dependencies
   - pip:
       - snakemake-executor-plugin-slurm
+
