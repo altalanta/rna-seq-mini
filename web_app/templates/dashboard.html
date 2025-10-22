@@ -33,6 +33,11 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
+                        <a class="nav-link" href="/tutorial">
+                            <i class="fas fa-graduation-cap me-1"></i>Tutorial
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#gene-search">Gene Search</a>
                     </li>
                     <li class="nav-item">
@@ -70,6 +75,50 @@
     </nav>
 
     <div class="container-fluid mt-4">
+        <!-- Progress Tracking Section -->
+        <section id="progress-tracking" class="mb-5">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5><i class="fas fa-tasks me-2"></i>Setup Progress</h5>
+                            <button class="btn btn-sm btn-outline-primary" onclick="showSetupWizard()">
+                                <i class="fas fa-magic me-1"></i>Run Setup Wizard
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-3">
+                                    <div class="progress-circle" data-progress="100">
+                                        <span class="progress-text">1</span>
+                                    </div>
+                                    <p class="mt-2">Environment Setup</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="progress-circle" data-progress="75">
+                                        <span class="progress-text">2</span>
+                                    </div>
+                                    <p class="mt-2">Project Config</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="progress-circle" data-progress="50">
+                                        <span class="progress-text">3</span>
+                                    </div>
+                                    <p class="mt-2">Sample Setup</p>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="progress-circle" data-progress="0">
+                                        <span class="progress-text">4</span>
+                                    </div>
+                                    <p class="mt-2">Analysis Ready</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Overview Section -->
         <section id="overview" class="mb-5">
             <div class="row">

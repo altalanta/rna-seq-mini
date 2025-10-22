@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <meta name="description" content="Interactive tutorial for RNASEQ-MINI analysis setup and workflow">
+    <title>RNASEQ-MINI Tutorial</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Custom CSS -->
+    <link href="/static/css/style.css" rel="stylesheet">
+
+    <!-- Font Awesome for icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-graduation-cap me-2"></i>
+                RNASEQ-MINI Tutorial
+            </a>
+
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#getting-started">Getting Started</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#setup-wizard">Setup Wizard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analysis-workflows">Analysis Workflows</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#troubleshooting">Troubleshooting</a>
+                    </li>
+                </ul>
+                <a class="btn btn-outline-light" href="/dashboard">
+                    <i class="fas fa-chart-line me-1"></i>Go to Dashboard
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <!-- Progress Tracker -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-tasks me-2"></i>Tutorial Progress</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="progress">
+                            <div class="progress-bar" role="progressbar" style="width: 0%" id="tutorial-progress" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted mt-2" id="progress-text">Step 1 of 8</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Getting Started Section -->
+        <section id="getting-started" class="tutorial-section">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-rocket me-2"></i>Getting Started</h2>
+                    <p class="lead">Welcome to RNASEQ-MINI! This tutorial will guide you through setting up and running your first RNA-seq analysis.</p>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Step 1: Installation</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>First, make sure you have RNASEQ-MINI installed:</p>
+                            <pre class="bg-light p-3 rounded"><code>git clone &lt;repository-url&gt;
+cd rnaseq-mini
+make setup</code></pre>
+                            <p>This will create the necessary conda environments and install dependencies.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6><i class="fas fa-lightbulb me-2"></i>Tip</h6>
+                        </div>
+                        <div class="card-body">
+                            <p>Use <code>make env-health</code> to verify your installation after setup.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <button class="btn btn-primary btn-lg" onclick="nextStep()">
+                        <i class="fas fa-arrow-right me-2"></i>Next: Setup Wizard
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Setup Wizard Section -->
+        <section id="setup-wizard" class="tutorial-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-magic me-2"></i>Setup Wizard</h2>
+                    <p class="lead">The interactive setup wizard helps you configure your analysis with intelligent defaults.</p>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Step 2: Choose Your Workflow</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>The wizard will ask you to select your analysis type:</p>
+                            <ul>
+                                <li><strong>Standard RNA-seq</strong>: Differential expression analysis</li>
+                                <li><strong>Single-cell RNA-seq</strong>: 10x Genomics or similar data</li>
+                                <li><strong>Multi-omics</strong>: Integration with ATAC-seq, proteomics, etc.</li>
+                                <li><strong>Custom</strong>: Advanced or specialized analyses</li>
+                            </ul>
+                            <p>Run the wizard with:</p>
+                            <pre class="bg-light p-3 rounded"><code>python scripts/setup_wizard.py</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6><i class="fas fa-question-circle me-2"></i>Interactive Demo</h6>
+                        </div>
+                        <div class="card-body">
+                            <button class="btn btn-info w-100" onclick="showWizardDemo()">
+                                <i class="fas fa-play me-2"></i>Watch Demo
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left me-2"></i>Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStep()">
+                        <i class="fas fa-arrow-right me-2"></i>Next: Sample Configuration
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Analysis Workflows Section -->
+        <section id="analysis-workflows" class="tutorial-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-cogs me-2"></i>Analysis Workflows</h2>
+                    <p class="lead">Learn about the different analysis workflows and when to use each one.</p>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-dna me-2"></i>Standard Workflow</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Best for:</p>
+                            <ul>
+                                <li>Bulk RNA-seq experiments</li>
+                                <li>Differential expression analysis</li>
+                                <li>Pathway enrichment studies</li>
+                            </ul>
+                            <p><strong>Tools:</strong> FastQC, Salmon, DESeq2, fgsea</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-microscope me-2"></i>Single-Cell Workflow</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>Best for:</p>
+                            <ul>
+                                <li>10x Genomics data</li>
+                                <li>Cell type identification</li>
+                                <li>Trajectory analysis</li>
+                            </ul>
+                            <p><strong>Tools:</strong> CellRanger, Scanpy, Seurat</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left me-2"></i>Previous
+                    </button>
+                    <button class="btn btn-primary" onclick="nextStep()">
+                        <i class="fas fa-arrow-right me-2"></i>Next: Running Analysis
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting Section -->
+        <section id="troubleshooting" class="tutorial-section d-none">
+            <div class="row">
+                <div class="col-12">
+                    <h2><i class="fas fa-wrench me-2"></i>Troubleshooting</h2>
+                    <p class="lead">Common issues and how to resolve them.</p>
+                </div>
+            </div>
+
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-exclamation-triangle me-2"></i>Common Issues</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="accordion" id="troubleshootingAccordion">
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingOne">
+                                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                            Memory Errors
+                                        </button>
+                                    </h2>
+                                    <div id="collapseOne" class="accordion-collapse collapse show">
+                                        <div class="accordion-body">
+                                            <p><strong>Solution:</strong> Reduce thread count or use <code>make estimate-resources</code> to optimize settings.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accordion-item">
+                                    <h2 class="accordion-header" id="headingTwo">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo">
+                                            Configuration Errors
+                                        </button>
+                                    </h2>
+                                    <div id="collapseTwo" class="accordion-collapse collapse">
+                                        <div class="accordion-body">
+                                            <p><strong>Solution:</strong> Run <code>make troubleshoot</code> or use the setup wizard to regenerate config.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-tools me-2"></i>Useful Commands</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item">
+                                    <code>make troubleshoot</code><br>
+                                    <small class="text-muted">Analyze and fix errors</small>
+                                </li>
+                                <li class="list-group-item">
+                                    <code>make env-health</code><br>
+                                    <small class="text-muted">Check environment integrity</small>
+                                </li>
+                                <li class="list-group-item">
+                                    <code>make cleanup-duplicates</code><br>
+                                    <small class="text-muted">Remove duplicate files</small>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-12 text-center">
+                    <button class="btn btn-secondary" onclick="prevStep()">
+                        <i class="fas fa-arrow-left me-2"></i>Previous
+                    </button>
+                    <button class="btn btn-success" onclick="completeTutorial()">
+                        <i class="fas fa-check me-2"></i>Complete Tutorial
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- Custom JavaScript -->
+    <script>
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        function updateProgress() {
+            const progress = (currentStep / totalSteps) * 100;
+            document.getElementById('tutorial-progress').style.width = progress + '%';
+            document.getElementById('progress-text').textContent = `Step ${currentStep} of ${totalSteps}`;
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                // Hide current section
+                document.querySelector('.tutorial-section:not(.d-none)').classList.add('d-none');
+
+                // Show next section
+                currentStep++;
+                const nextSection = document.getElementById(getSectionId(currentStep));
+                if (nextSection) {
+                    nextSection.classList.remove('d-none');
+                }
+
+                updateProgress();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                // Hide current section
+                document.querySelector('.tutorial-section:not(.d-none)').classList.add('d-none');
+
+                // Show previous section
+                currentStep--;
+                const prevSection = document.getElementById(getSectionId(currentStep));
+                if (prevSection) {
+                    prevSection.classList.remove('d-none');
+                }
+
+                updateProgress();
+            }
+        }
+
+        function getSectionId(step) {
+            const sections = ['getting-started', 'setup-wizard', 'analysis-workflows', 'troubleshooting'];
+            return sections[step - 1];
+        }
+
+        function completeTutorial() {
+            alert('🎉 Tutorial completed! You\'re ready to start your RNA-seq analysis.');
+            window.location.href = '/dashboard';
+        }
+
+        function showWizardDemo() {
+            alert('📹 Demo: The setup wizard will interactively guide you through configuration. Watch for workflow-specific tips!');
+        }
+
+        // Initialize
+        updateProgress();
+    </script>
+</body>
+</html>
