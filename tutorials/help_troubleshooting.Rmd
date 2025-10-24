@@ -1,0 +1,448 @@
+---
+title: "Troubleshooting Guide - NHANES BMI Body Fat Analysis"
+author: "NHANES BMI Body Fat Analysis Team"
+output:
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+    css: css/styles.css
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(yaml)
+library(dplyr)
+
+# Set knitr options for learnr
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Troubleshooting Guide 🛠️
+
+Welcome to the comprehensive troubleshooting guide for the NHANES BMI Body Fat Analysis! This interactive guide will help you diagnose and resolve common issues.
+
+### Quick Health Check
+
+Let's start by checking your pipeline health:
+
+```{r health-check, exercise=TRUE}
+# Run the pipeline health check
+tryCatch({
+  source("../R/error_handling.R")
+  display_pipeline_health()
+}, error = function(e) {
+  cat("❌ Could not run health check. Please check your R environment.\n")
+  cat("Error:", e$message, "\n")
+})
+```
+
+## Common Issues & Solutions
+
+### 1. Installation Problems
+
+#### ❌ "Package 'X' not found" errors
+
+**Symptoms:**
+- Error messages about missing packages during installation or runtime
+- `library(package_name)` fails
+
+**Solutions:**
+
+1. **Install missing packages:**
+```r
+install.packages(c('dplyr', 'ggplot2', 'survey', 'foreign', 'yaml', 'future', 'furrr'))
+```
+
+2. **Update R and RStudio:**
+```r
+# In R console:
+install.packages("installr")
+installr::updateR()
+```
+
+3. **Check system dependencies:**
+```bash
+# On macOS with Homebrew:
+brew install gfortran
+```
+
+4. **Use renv for reproducible environments:**
+```r
+# If renv is available:
+renv::restore()
+```
+
+#### Quiz: Package Installation
+
+```{r quiz-packages}
+quiz(caption = "Package Installation Troubleshooting",
+  question("What should you do first if you get a 'package not found' error?",
+    answer("Reinstall R completely", message = "Try installing the specific package first."),
+    answer("Install the missing package", correct = TRUE),
+    answer("Delete all packages", message = "Install the missing package, don't delete others."),
+    answer("Restart your computer", message = "Package installation should resolve the issue.")
+  ),
+  question("Which command installs multiple packages at once?",
+    answer("install.packages(package1, package2)", message = "Use a character vector: c('package1', 'package2')."),
+    answer("install.packages(c('package1', 'package2'))", correct = TRUE),
+    answer("install.packages('package1', 'package2')", message = "Use a character vector: c('package1', 'package2')."),
+    answer("install.packages(package1 + package2)", message = "Use a character vector: c('package1', 'package2').")
+  )
+)
+```
+
+### 2. Data Download Issues
+
+#### ❌ "File not found" or "Data download failed" errors
+
+**Symptoms:**
+- `make fetch` fails
+- Missing files in `data/raw/` directory
+- Network timeout errors
+
+**Solutions:**
+
+1. **Check internet connection:**
+```bash
+# Test connection
+ping -c 3 google.com
+```
+
+2. **Verify disk space:**
+```bash
+# Check available space
+df -h
+```
+
+3. **Manual download (alternative):**
+```bash
+# Download files manually from CDC website:
+# https://wwwn.cdc.gov/Nchs/Nhanes/2017-2018/DEMO_J.XPT
+# Place in data/raw/ directory
+```
+
+4. **Retry with verbose output:**
+```r
+# Run with detailed logging
+R -e "source('scripts/fetch_nhanes.R'); cat('Download completed\n')"
+```
+
+### 3. Configuration Problems
+
+#### ❌ "Configuration file not found" or "Invalid YAML" errors
+
+**Symptoms:**
+- Missing `config/config.yml` file
+- YAML parsing errors
+- Missing required configuration sections
+
+**Solutions:**
+
+1. **Use the Configuration Wizard:**
+```r
+# Launch the interactive configuration tool
+R -e "shiny::runApp('app.R')"
+```
+
+2. **Create config directory and file:**
+```bash
+mkdir -p config
+# The wizard will create the config.yml file
+```
+
+3. **Validate YAML syntax:**
+```yaml
+# Check your config.yml file for proper indentation and structure
+data:
+  raw_dir: "data/raw"
+  derived_dir: "data/derived"
+# Use spaces, not tabs!
+```
+
+#### Interactive Exercise: Fix Configuration
+
+Let's check and fix common configuration issues:
+
+```{r config-check, exercise=TRUE}
+# Check if config file exists
+config_file <- "../config/config.yml"
+
+if (file.exists(config_file)) {
+  tryCatch({
+    config <- yaml::read_yaml(config_file)
+    cat("✅ Configuration file exists and is valid!\n")
+
+    # Check required sections
+    required_sections <- c("data", "outputs", "nhanes", "analysis", "logging")
+    missing_sections <- required_sections[!required_sections %in% names(config)]
+
+    if (length(missing_sections) == 0) {
+      cat("✅ All required configuration sections present!\n")
+    } else {
+      cat("❌ Missing sections:", paste(missing_sections, collapse = ", "), "\n")
+      cat("💡 Use the Configuration Wizard to fix this.\n")
+    }
+  }, error = function(e) {
+    cat("❌ Configuration file has syntax errors.\n")
+    cat("Error:", e$message, "\n")
+    cat("💡 Use the Configuration Wizard to create a valid config file.\n")
+  })
+} else {
+  cat("❌ Configuration file not found.\n")
+  cat("💡 Run: R -e 'shiny::runApp(\"app.R\")' to create it.\n")
+}
+```
+
+### 4. Directory Structure Issues
+
+#### ❌ "Directory not found" or "Permission denied" errors
+
+**Symptoms:**
+- Missing directories in error messages
+- Cannot write to output directories
+- File creation fails
+
+**Solutions:**
+
+1. **Create required directories:**
+```bash
+# Create all required directories at once
+mkdir -p data/raw data/derived outputs/tables outputs/figures outputs/logs outputs/report config cache tutorials
+```
+
+2. **Check permissions:**
+```bash
+# Check current directory permissions
+ls -la
+
+# Fix permissions if needed
+chmod 755 data outputs config
+```
+
+3. **Use absolute paths in configuration:**
+```yaml
+# In config/config.yml, use absolute paths if relative paths fail
+data:
+  raw_dir: "/full/path/to/project/data/raw"
+```
+
+### 5. Memory and Performance Issues
+
+#### ❌ "Out of memory" or "Process killed" errors
+
+**Symptoms:**
+- R crashes during analysis
+- High memory usage
+- Slow performance
+
+**Solutions:**
+
+1. **Use parallel processing:**
+```bash
+# Use the parallel pipeline for better performance
+make parallel-pipeline
+```
+
+2. **Increase R memory limit:**
+```r
+# In R console:
+memory.limit(size = 8192)  # Increase to 8GB
+```
+
+3. **Monitor system resources:**
+```bash
+# Check memory usage
+top -o mem
+
+# Check disk space
+df -h
+```
+
+4. **Use caching:**
+```bash
+# Enable caching to avoid re-computation
+make parallel-pipeline  # Automatically uses caching
+```
+
+### 6. Statistical Analysis Issues
+
+#### ❌ "Convergence failed" or "Invalid results" errors
+
+**Symptoms:**
+- Survey analysis fails to converge
+- Strange statistical results
+- Warning messages about sample sizes
+
+**Solutions:**
+
+1. **Check sample sizes:**
+```r
+# Check sample size in your data
+summary(your_data$sample_size_variable)
+```
+
+2. **Review survey design:**
+```r
+# Check survey weights distribution
+summary(your_data$WTMEC2YR)
+```
+
+3. **Validate data quality:**
+```r
+# Check for missing values
+colSums(is.na(your_data))
+```
+
+## Advanced Troubleshooting
+
+### Debugging Tools
+
+#### 1. Enable Debug Logging
+
+```r
+# In config/config.yml, set logging level to DEBUG
+logging:
+  level: "DEBUG"
+  file: "analysis_log.txt"
+```
+
+#### 2. Run Step-by-Step
+
+```bash
+# Run individual pipeline steps for debugging
+make fetch        # Download data
+make cleandata    # Process data
+make analysis     # Run analysis
+make viz         # Generate plots
+```
+
+#### 3. Check Error Logs
+
+```r
+# View detailed error logs
+cat outputs/logs/analysis_log.txt
+cat outputs/logs/error_details.txt
+```
+
+### Interactive Debugging Exercise
+
+Let's practice debugging a common issue:
+
+```{r debug-exercise, exercise=TRUE}
+# Simulate a common error scenario
+# Uncomment and run this code to see error handling in action
+
+# Example: Missing data file
+# tryCatch({
+#   data <- read.csv("nonexistent_file.csv")
+# }, error = function(e) {
+#   source("../R/error_handling.R")
+#   fake_error <- NhanesError(
+#     message = "File not found: nonexistent_file.csv",
+#     code = "FILE_NOT_FOUND",
+#     details = list(file_path = "nonexistent_file.csv")
+#   )
+#   display_user_friendly_error(fake_error)
+# })
+
+cat("💡 Tip: The enhanced error handling shows actionable suggestions for each error type.\n")
+```
+
+## Getting Help
+
+### Self-Service Resources
+
+1. **Interactive Tutorial**: `tutorials/getting_started.Rmd`
+2. **Configuration Wizard**: `R -e 'shiny::runApp("app.R")'`
+3. **Pipeline Health Check**: `R -e 'source("R/error_handling.R"); display_pipeline_health()'`
+4. **Error Logs**: `outputs/logs/`
+
+### Community Support
+
+1. **GitHub Issues**: https://github.com/altalanta/nhanes-bmi-bodyfat/issues
+2. **Documentation**: outputs/report/report.html
+3. **Email Support**: analysis@nhanes-bmi.org
+
+### Professional Support
+
+For research collaborations or advanced customization:
+- **Consulting Services**: Available for custom analysis and methodology
+- **Training Workshops**: Hands-on training for research teams
+- **Code Review**: Professional review of analysis pipelines
+
+## Prevention Best Practices
+
+### 1. Regular Health Checks
+
+```r
+# Run this before starting new analyses
+source("R/error_handling.R")
+display_pipeline_health()
+```
+
+### 2. Version Control
+
+```bash
+# Track your configuration and results
+git add config/config.yml outputs/
+git commit -m "Updated configuration for new analysis"
+```
+
+### 3. Documentation
+
+```r
+# Document your analysis parameters
+# Create a README in your outputs directory
+writeLines(c(
+  "Analysis Date: ", Sys.Date(),
+  "Configuration: See config/config.yml",
+  "Results: See outputs/tables/ and outputs/figures/"
+), "outputs/README.txt")
+```
+
+## Final Quiz: Troubleshooting Skills
+
+```{r final-troubleshooting-quiz}
+quiz(caption = "Troubleshooting Assessment",
+  question("What should you do first when encountering an error?",
+    answer("Panic and restart everything", message = "Stay calm and check the error message details."),
+    answer("Read the error message carefully", correct = TRUE),
+    answer("Delete all files and start over", message = "Check the error message and use the suggestions provided."),
+    answer("Ignore it and hope it goes away", message = "Address errors systematically using the provided suggestions.")
+  ),
+  question("Which tool helps diagnose setup issues before running analysis?",
+    answer("Pipeline health check", correct = TRUE),
+    answer("Random guessing", message = "Use the systematic health check function."),
+    answer("Crystal ball", message = "Use the systematic health check function."),
+    answer("Magic wand", message = "Use the systematic health check function.")
+  ),
+  question("What's the best way to get help for complex issues?",
+    answer("GitHub Issues page", correct = TRUE),
+    answer("Random internet search", message = "Use the official GitHub issues for structured support."),
+    answer("Yelling at the computer", message = "Use structured support channels."),
+    answer("Hiring a psychic", message = "Use structured support channels.")
+  )
+)
+```
+
+## Congratulations! 🎉
+
+You've completed the troubleshooting guide! You now have the skills to:
+
+- ✅ Diagnose common NHANES analysis issues
+- ✅ Apply systematic troubleshooting approaches
+- ✅ Use enhanced error messages effectively
+- ✅ Prevent issues through best practices
+- ✅ Seek help when needed
+
+### Remember:
+- **Stay calm** when errors occur - most have simple solutions!
+- **Check the error suggestions** - they're tailored to each error type
+- **Use the health check** before starting new analyses
+- **Document your solutions** for future reference
+
+Happy troubleshooting! 🔧✨
+
+
+

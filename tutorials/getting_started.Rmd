@@ -1,0 +1,364 @@
+---
+title: "Getting Started with NHANES BMI Body Fat Analysis"
+author: "NHANES BMI Body Fat Analysis Team"
+output:
+  learnr::tutorial:
+    progressive: true
+    allow_skip: true
+    css: css/styles.css
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+library(learnr)
+library(dplyr)
+library(ggplot2)
+library(yaml)
+
+# Load configuration
+config <- read_yaml("../config/config.yml")
+
+# Set knitr options for learnr
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## Welcome to the NHANES BMI Body Fat Analysis Tutorial! 👋
+
+This interactive tutorial will guide you through analyzing the relationship between Body Mass Index (BMI) and whole-body percent body fat using NHANES 2017-2018 data.
+
+### What You'll Learn:
+- **Understanding the Data**: Explore NHANES survey methodology and data structure
+- **Running the Analysis**: Execute the complete analysis pipeline
+- **Interpreting Results**: Understand correlation coefficients and statistical findings
+- **Customization**: Modify analysis parameters for your research needs
+
+### Prerequisites:
+- Basic familiarity with R
+- Understanding of statistical concepts (correlations, survey methodology)
+- The `nhanesbmi` package installed (or run from source)
+
+Let's get started!
+
+## Understanding NHANES Data
+
+NHANES (National Health and Nutrition Examination Survey) is a comprehensive survey conducted by the CDC to assess the health and nutritional status of Americans.
+
+### Key Features of This Analysis:
+- **Survey-Weighted Design**: Accounts for complex sampling methodology
+- **2017-2018 Data**: Latest available cycle with DXA body composition measurements
+- **Adult Population**: Focuses on U.S. adults aged 20-59 years
+- **Reproducible Pipeline**: Automated data fetching, cleaning, and analysis
+
+### Data Sources:
+The analysis uses four main NHANES data files:
+1. **Demographics** (DEMO_J.XPT) - Age, sex, ethnicity, survey weights
+2. **Body Measures** (BMX_J.XPT) - BMI measurements
+3. **DXA Whole Body** (DXX_J.XPT) - Whole-body percent body fat
+4. **DXA Android/Gynoid** (DXXAG_J.XPT) - Regional body fat distribution
+
+## Quiz: NHANES Basics
+
+```{r quiz-nhanes}
+quiz(caption = "Test your understanding of NHANES",
+  question("What does NHANES stand for?",
+    answer("National Health and Nutrition Examination Survey", correct = TRUE),
+    answer("National Health Assessment and Nutrition Evaluation Study"),
+    answer("Nationwide Health and Nutritional Epidemiology Survey"),
+    answer("National Healthcare and Nutrition Examination System")
+  ),
+  question("Which age group does this analysis focus on?",
+    answer("Children under 18", message = "This analysis focuses on adults 20-59 years old."),
+    answer("Adults 20-59 years", correct = TRUE),
+    answer("Seniors over 60", message = "This analysis focuses on adults 20-59 years old."),
+    answer("All ages", message = "This analysis focuses on adults 20-59 years old.")
+  ),
+  question("What type of body fat measurement does this analysis use?",
+    answer("Bioelectrical impedance", message = "This analysis uses DXA (Dual-energy X-ray absorptiometry) measurements."),
+    answer("Skinfold calipers", message = "This analysis uses DXA (Dual-energy X-ray absorptiometry) measurements."),
+    answer("DXA (Dual-energy X-ray absorptiometry)", correct = TRUE),
+    answer("Underwater weighing", message = "This analysis uses DXA (Dual-energy X-ray absorptiometry) measurements.")
+  )
+)
+```
+
+## Setting Up Your Analysis Environment
+
+Before running the analysis, you need to set up your R environment. Let's check if everything is ready:
+
+### Step 1: Verify Package Installation
+
+First, let's check if the required packages are installed:
+
+```{r check-packages, exercise=TRUE}
+# Check if required packages are available
+required_packages <- c("dplyr", "ggplot2", "survey", "foreign", "readr", "yaml")
+
+# Check which packages are missing
+missing_packages <- required_packages[!sapply(required_packages, requireNamespace, quietly = TRUE)]
+
+if (length(missing_packages) == 0) {
+  cat("✅ All required packages are installed!\n")
+} else {
+  cat("❌ Missing packages:", paste(missing_packages, collapse = ", "), "\n")
+  cat("Please install them using: install.packages(c('", paste(missing_packages, collapse = "', '"), "'))\n")
+}
+```
+
+### Step 2: Verify Data Directory Structure
+
+The pipeline expects data to be in specific directories:
+
+```{r check-directories, exercise=TRUE}
+# Check if required directories exist
+required_dirs <- c("data/raw", "data/derived", "outputs/tables", "outputs/figures", "outputs/logs")
+
+missing_dirs <- required_dirs[!dir.exists(required_dirs)]
+
+if (length(missing_dirs) == 0) {
+  cat("✅ All required directories exist!\n")
+} else {
+  cat("❌ Missing directories:", paste(missing_dirs, collapse = ", "), "\n")
+  cat("Please create them using: dir.create(c('", paste(missing_dirs, collapse = "', '"), "'), recursive = TRUE)\n")
+}
+```
+
+### Step 3: Load Configuration
+
+The analysis uses a configuration file to specify parameters:
+
+```{r load-config, exercise=TRUE}
+# Try to load the configuration
+tryCatch({
+  config <- read_yaml("../config/config.yml")
+  cat("✅ Configuration loaded successfully!\n")
+  cat("Analysis age range:", paste(config$analysis$age_range, collapse = "-"), "years\n")
+  cat("Survey weights column:", config$analysis$survey_weights_col, "\n")
+}, error = function(e) {
+  cat("❌ Could not load configuration file.\n")
+  cat("Error:", e$message, "\n")
+})
+```
+
+## Running Your First Analysis
+
+Now that your environment is set up, let's run the analysis pipeline!
+
+### Method 1: Using Make (Recommended)
+
+The easiest way to run the complete analysis:
+
+```bash
+make all
+```
+
+This runs the complete pipeline: data fetching → validation → cleaning → analysis → visualization → reporting.
+
+### Method 2: Using the Parallel Pipeline
+
+For better performance with parallel processing:
+
+```bash
+make parallel-pipeline
+```
+
+### Method 3: Step by Step
+
+If you want to run individual steps:
+
+```bash
+make fetch        # Download NHANES data
+make cleandata    # Process and clean data
+make analysis     # Run statistical analysis
+make viz         # Generate visualizations
+make report      # Create HTML report
+```
+
+## Interactive Exercise: Run a Quick Analysis
+
+Let's try running a simplified version of the analysis to see the results:
+
+```{r quick-analysis, exercise=TRUE, exercise.cap="Run a quick correlation analysis"}
+# Load sample data (if available) or create mock data for demonstration
+set.seed(123)
+
+# Create mock data for demonstration
+n <- 100
+mock_data <- data.frame(
+  BMI = rnorm(n, 27, 5),
+  body_fat = rnorm(n, 25, 8),
+  sex = sample(c("Male", "Female"), n, replace = TRUE)
+)
+
+# Calculate correlation by sex
+results <- mock_data %>%
+  group_by(sex) %>%
+  summarize(
+    correlation = cor(BMI, body_fat),
+    n = n()
+  )
+
+print(results)
+```
+
+## Understanding the Results
+
+### What the Analysis Produces:
+
+1. **Correlation Results** (`outputs/tables/corr_bmi_bodyfat_overall_and_by_sex.csv`)
+   - Overall correlation between BMI and body fat
+   - Sex-stratified correlations
+   - 95% confidence intervals
+
+2. **BMI Class Analysis** (`outputs/tables/bodyfat_by_bmi_class_by_sex.csv`)
+   - Mean body fat percentage by BMI category and sex
+   - Quantiles (5th, 50th, 95th percentiles)
+   - Sample sizes for each group
+
+3. **Visualizations** (`outputs/figures/`)
+   - Scatter plots with trend lines
+   - Bar charts by BMI category
+   - Publication-ready figures
+
+4. **HTML Report** (`outputs/report/report.html`)
+   - Complete methodology and results
+   - Interactive visualizations
+   - Statistical details
+
+## Quiz: Interpreting Results
+
+```{r quiz-results}
+quiz(caption = "Understanding Analysis Results",
+  question("What is the typical correlation range between BMI and body fat?",
+    answer("0.1-0.3 (weak)", message = "The correlation is typically much stronger."),
+    answer("0.7-0.9 (strong)", correct = TRUE),
+    answer("0.95-0.99 (very strong)", message = "While strong, it's typically in the 0.7-0.9 range."),
+    answer("Negative correlation", message = "BMI and body fat are positively correlated.")
+  ),
+  question("Which sex typically shows higher correlation between BMI and body fat?",
+    answer("Males", message = "Females typically show higher correlation."),
+    answer("Females", correct = TRUE),
+    answer("No difference", message = "There is typically a small difference favoring females."),
+    answer("Depends on age", message = "The difference is consistent across age groups.")
+  ),
+  question("What does the analysis account for in its statistical methods?",
+    answer("Simple random sampling", message = "NHANES uses complex survey sampling."),
+    answer("Complex survey design and weighting", correct = TRUE),
+    answer("Only demographic variables", message = "It accounts for survey design including weights, strata, and PSUs."),
+    answer("No statistical adjustments", message = "The analysis uses proper survey-weighted methods.")
+  )
+)
+```
+
+## Customizing Your Analysis
+
+You can modify the analysis by editing the configuration file:
+
+### Configuration Options:
+
+- **Age Range**: Modify `config/config.yml` to change the age range (currently 20-59)
+- **BMI Categories**: Adjust the BMI category cutoffs in the analysis script
+- **Output Formats**: The pipeline supports multiple output formats (CSV, PNG, PDF, HTML)
+
+### Advanced Customization:
+
+For more advanced customization, you can:
+
+1. **Modify Analysis Parameters**: Edit `config/config.yml`
+2. **Add New Variables**: Include additional NHANES variables in the analysis
+3. **Change Statistical Methods**: Modify the correlation or modeling approach
+4. **Add Sensitivity Analyses**: Include additional robustness checks
+
+## Interactive Exercise: Explore Configuration
+
+Let's examine the current configuration and see what options are available:
+
+```{r explore-config, exercise=TRUE}
+# Load and display configuration
+config <- read_yaml("../config/config.yml")
+
+cat("Current Configuration:\n")
+cat("=====================\n")
+cat("Data directories:\n")
+cat("  Raw data:", config$data$raw_dir, "\n")
+cat("  Derived data:", config$data$derived_dir, "\n")
+cat("  Tables:", config$outputs$tables_dir, "\n")
+cat("  Figures:", config$outputs$figures_dir, "\n")
+cat("  Logs:", config$outputs$logs_dir, "\n")
+
+cat("\nNHANES files:\n")
+for (key in names(config$nhanes)) {
+  cat("  ", key, ":", config$nhanes[[key]], "\n")
+}
+
+cat("\nAnalysis parameters:\n")
+cat("  Age range:", paste(config$analysis$age_range, collapse = "-"), "\n")
+cat("  Survey weights:", config$analysis$survey_weights_col, "\n")
+cat("  Strata:", config$analysis$strata_col, "\n")
+cat("  PSU:", config$analysis$psu_col, "\n")
+```
+
+## Next Steps and Resources
+
+### What You've Learned:
+- ✅ NHANES data structure and methodology
+- ✅ How to set up your analysis environment
+- ✅ How to run the analysis pipeline
+- ✅ How to interpret the results
+- ✅ How to customize the analysis
+
+### Additional Resources:
+- **Package Documentation**: `?nhanesbmi` for function reference
+- **GitHub Repository**: [https://github.com/altalanta/nhanes-bmi-bodyfat](https://github.com/altalanta/nhanes-bmi-bodyfat)
+- **NHANES Website**: [https://www.cdc.gov/nchs/nhanes/](https://www.cdc.gov/nchs/nhanes/)
+- **Methodology Paper**: See `outputs/report/report.html` for complete details
+
+### Advanced Topics:
+- **Bayesian Analysis**: Advanced statistical modeling (`vignettes/advanced-features.Rmd`)
+- **Causal Inference**: Propensity score methods for causal questions
+- **Machine Learning**: Predictive modeling approaches
+- **API Integration**: REST API for programmatic access
+
+## Final Quiz
+
+```{r final-quiz}
+quiz(caption = "Final Assessment",
+  question("What is the primary advantage of using survey-weighted analysis?",
+    answer("Faster computation", message = "Survey weighting ensures accurate population estimates."),
+    answer("More precise individual estimates", message = "Survey weighting ensures accurate population estimates."),
+    answer("Accurate population-level estimates", correct = TRUE),
+    answer("Simpler statistical tests", message = "Survey weighting is essential for proper inference.")
+  ),
+  question("Which file contains the main analysis results?",
+    answer("outputs/tables/corr_bmi_bodyfat_overall_and_by_sex.csv", correct = TRUE),
+    answer("data/raw/DEMO_J.XPT", message = "This is raw input data."),
+    answer("scripts/nhanes_bmi_bodyfat_analysis.R", message = "This is the analysis script."),
+    answer("README.md", message = "This contains documentation.")
+  ),
+  question("How can you run the complete analysis pipeline?",
+    answer("Rscript analyze.R", message = "Use 'make all' or 'make parallel-pipeline'."),
+    answer("make all", correct = TRUE),
+    answer("python nhanes_analysis.py", message = "This is an R package, use make commands."),
+    answer("R CMD check", message = "Use 'make all' or 'make parallel-pipeline'.")
+  )
+)
+```
+
+## Congratulations! 🎉
+
+You've completed the Getting Started tutorial! You now have the knowledge to:
+
+- Understand NHANES data and methodology
+- Set up your analysis environment
+- Run the complete analysis pipeline
+- Interpret and customize results
+
+### What's Next?
+- Try running `make parallel-pipeline` to see the analysis in action
+- Explore the generated results in the `outputs/` directory
+- Read the complete methodology in `outputs/report/report.html`
+- Customize the analysis for your specific research questions
+
+Happy analyzing! 📊✨
+
+
+
