@@ -1,0 +1,99 @@
+Package: nhanesbmi
+Title: NHANES BMI vs Body Fat Analysis Package
+Version: 1.0.0
+Authors@R: person("NHANES", "BMI Body Fat Analysis Team", role = c("aut", "cre"),
+                  email = "analysis@nhanes-bmi.org")
+Description: A comprehensive R package for analyzing the relationship between Body Mass Index (BMI) and whole-body percent body fat using NHANES 2017-2018 data. Provides design-based (survey-weighted) statistical methods for reproducible analysis of U.S. civilian non-institutionalized adults aged 20-59 years.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.0.0)
+Imports:
+    dplyr,
+    ggplot2,
+    survey,
+    foreign,
+    readr,
+    yaml,
+    lintr,
+    styler,
+    testthat,
+    knitr,
+    rmarkdown,
+    here,
+    future,
+    furrr,
+    digest,
+    shiny,
+    jsonlite,
+    httr
+Suggests:
+    shiny,
+    plotly,
+    DT,
+    nhanesA,
+    quarto,
+    learnr,
+    bookdown,
+    corrplot,
+    rgl,
+    plumber,
+    RSQLite,
+    haven,
+    ppcor,
+    psych,
+    quantreg,
+    conflicted,
+    profvis,
+    profmem,
+    usethis,
+    rstanarm,
+    bayesplot,
+    randomForest,
+    xgboost,
+    caret,
+    glmnet,
+    quantreg,
+    lme4,
+    nlme,
+    plumber,
+    reticulate,
+    jsonld,
+    MatchIt,
+    WeightIt,
+    cobalt,
+    MBESS,
+    effectsize,
+    rsample,
+    yardstick,
+    loo,
+    posterior,
+    brms,
+    knitr,
+    rmarkdown,
+    microbenchmark,
+    bench,
+    shinydashboard,
+    caret,
+    randomForest,
+    xgboost,
+    neuralnet,
+    cluster,
+    factoextra,
+    DALEX,
+    DALEXtra,
+    lime,
+    shapviz,
+    recipes,
+    tidymodels,
+    workflows,
+    tune,
+    finetune,
+    stacks,
+    fastDummies
+URL: https://github.com/altalanta/nhanes-bmi-bodyfat
+BugReports: https://github.com/altalanta/nhanes-bmi-bodyfat/issues
+VignetteBuilder: knitr
