@@ -1,5 +1,19 @@
 nextflow.enable.dsl=2
 
+// --- Configuration Validation ---
+process VALIDATE_CONFIG {
+    // This process should always run
+    beforeScript 'echo "--- Running Configuration Validation ---"'
+    
+    output:
+    stdout 
+
+    script:
+    """
+    python scripts/validate_config.py
+    """
+}
+
 // Import caching system
 try {
     evaluate(new File('../../scripts/cache_manager.py'))
@@ -18,11 +32,12 @@ include { SINGLECELL_ANALYSIS } from './modules/singlecell.nf'
 include { REPORT } from './modules/report.nf'
 
 params.project = params.project ?: 'rnaseq-mini'
+params.results_dir = params.results_dir ?: 'results' // Allow overriding output directory
 params.paths = params.paths ?: [:]
 params.paths.samples = params.paths.samples ?: 'config/samples.tsv'
-params.paths.salmon = params.paths.salmon ?: 'results/salmon'
-params.paths.qc = params.paths.qc ?: 'results/qc'
-params.paths.outdir = params.paths.outdir ?: 'results'
+params.paths.salmon = "${params.results_dir}/salmon"
+params.paths.qc = "${params.results_dir}/qc"
+params.paths.outdir = params.results_dir
 params.reference = params.reference ?: [:]
 params.reference.transcripts_fa = params.reference.transcripts_fa ?: 'references/yeast/transcripts.fa.gz'
 params.reference.annotation_gtf = params.reference.annotation_gtf ?: 'references/yeast/annotation.gtf.gz'
@@ -43,6 +58,9 @@ params.singlecell.max_genes = params.singlecell.max_genes ?: 6000
 params.singlecell.mito_threshold = params.singlecell.mito_threshold ?: 10.0
 
 workflow {
+    // Start with validation
+    VALIDATE_CONFIG()
+    
     samples_file = file(params.paths.samples)
     contrasts_file = file(params.r.contrasts_file)
 

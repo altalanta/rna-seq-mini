@@ -94,18 +94,29 @@ def compare_hashes(hash_file1, hash_file2, tolerance=1e-10):
     return results
 
 
-def validate_numerical_reproducibility(file_path, engine1_dir, engine2_dir, tolerance=1e-10):
+def validate_numerical_reproducibility(file_path, hash_file1, hash_file2, tolerance=1e-10):
     """Validate that numerical results are reproducible between engines."""
     try:
-        file1 = Path(engine1_dir).parent / file_path
-        file2 = Path(engine2_dir).parent / file_path
+        # Infer results directories from hash file names
+        # e.g., hashes-snakemake.sha256 -> results-snakemake
+        engine1_name = Path(hash_file1).stem.split('-')[1]
+        engine2_name = Path(hash_file2).stem.split('-')[1]
+        results_dir1 = f"results-{engine1_name}"
+        results_dir2 = f"results-{engine2_name}"
 
-        if not file1.exists() or not file2.exists():
+        file1 = Path(results_dir1) / file_path
+        file2 = Path(results_dir2) / file_path
+
+        if not file1.exists():
+            print(f"  Warning: Cannot find {file1} for numerical comparison.")
+            return False
+        if not file2.exists():
+            print(f"  Warning: Cannot find {file2} for numerical comparison.")
             return False
 
         # Read data files
-        df1 = pd.read_csv(file1, sep='\t')
-        df2 = pd.read_csv(file2, sep='\t')
+        df1 = pd.read_csv(file1, sep='\\t', engine='python')
+        df2 = pd.read_csv(file2, sep='\\t', engine='python')
 
         # Check if dataframes have same shape
         if df1.shape != df2.shape:

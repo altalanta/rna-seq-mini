@@ -3,13 +3,23 @@ from __future__ import annotations
 import csv
 from pathlib import Path
 
+# Run configuration validation as the first step
+import subprocess
+import sys
+
+try:
+    # Use the new validation script
+    subprocess.run(["python", "scripts/validate_config.py"], check=True)
+except (subprocess.CalledProcessError, FileNotFoundError):
+    sys.exit(1) # Exit if validation fails or script not found
+
 from utils.functions import (
     ensure_directory,
     read_contrasts,
     read_samples,
     sample_is_single_end,
 )
-from utils.schema import validate_config
+# from utils.schema import validate_config # No longer needed
 
 # Import caching system
 try:
@@ -24,7 +34,7 @@ except ImportError:
 
 configfile: "config/params.yaml"
 
-validate_config(config)
+# validate_config(config) # No longer needed, handled by script call above
 
 PROJECT_DIR = Path.cwd()
 LOG_DIR = Path(config["paths"]["logs"])
@@ -46,19 +56,21 @@ for sample in SAMPLES:
 contrasts = read_contrasts(config["r"]["contrasts_file"])
 CONTRAST_LABELS = [f"{a}_vs_{b}" for a, b in contrasts]
 
-RESULTS_DIR = Path(config["paths"]["outdir"])
-QC_DIR = Path(config["paths"]["qc"])
-SALMON_DIR = Path(config["paths"]["salmon"])
-COUNTS_DIR = Path(config["paths"]["counts"])
-DE_DIR = Path(config["paths"]["de"])
-FGSEA_DIR = Path(config["paths"]["fgsea"])
+# Allow overriding the results directory from the command line, e.g., for smoke tests
+RESULTS_DIR = Path(config.get("results_dir", config["paths"]["outdir"]))
+
+QC_DIR = RESULTS_DIR / "qc"
+SALMON_DIR = RESULTS_DIR / "salmon"
+COUNTS_DIR = RESULTS_DIR / "counts"
+DE_DIR = RESULTS_DIR / "de"
+FGSEA_DIR = RESULTS_DIR / "fgsea"
 SALMON_INDEX_DIR = Path(config["reference"]["salmon_index"])
 TX2GENE = SALMON_INDEX_DIR / "tx2gene.tsv"
 DE_TABLE_PATHS = [DE_DIR / f"DE_{label}.tsv" for label in CONTRAST_LABELS]
 FGSEA_TABLE_PATHS = [FGSEA_DIR / f"fgsea_{label}.tsv" for label in CONTRAST_LABELS]
 DE_FIG_DIR = DE_DIR / "figures"
 FGSEA_FIG_DIR = FGSEA_DIR / "figures"
-REPORT_HTML = config["report"]["output_html"]
+REPORT_HTML = RESULTS_DIR / "report.html"
 
 for path in [RESULTS_DIR, QC_DIR, SALMON_DIR, COUNTS_DIR, DE_DIR, FGSEA_DIR, LOG_DIR]:
     ensure_directory(path)
