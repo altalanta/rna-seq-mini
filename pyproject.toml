@@ -20,6 +20,10 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["rnaseq_mini"]
+
 [tool.ruff]
 line-length = 88
 target-version = "py39"

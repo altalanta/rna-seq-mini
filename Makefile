@@ -13,6 +13,7 @@ setup: ## Create consolidated Conda environments and install pre-commit
 	@mamba env create -f envs/rnaseq-core.yml || conda env create -f envs/rnaseq-core.yml
 	@mamba env create -f envs/rnaseq-analysis.yml || conda env create -f envs/rnaseq-analysis.yml
 	@conda run -n rnaseq-mini-core pre-commit install
+	@conda run -n rnaseq-mini-core pip install -e .
 
 setup-singlecell: ## Install single-cell analysis dependencies
 	@pip install -r requirements-singlecell.txt
