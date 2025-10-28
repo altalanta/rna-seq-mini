@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RNASEQ-MINI Configuration Schema",
+  "description": "Schema for validating the config/params.yaml file",
+  "type": "object",
+  "properties": {
+    "project": { "type": "string" },
+    "engine": { "enum": ["snakemake", "nextflow"] },
+    "se": { "type": "boolean" },
+    "threads": { "type": "integer", "minimum": 1 },
+    "memory_gb": { "type": "integer", "minimum": 1 },
+    "organism": { "type": "string" },
+    "reference": {
+      "type": "object",
+      "properties": {
+        "transcripts_fa": { "type": "string", "format": "path" },
+        "annotation_gtf": { "type": "string", "format": "path" },
+        "decoy_fasta": { "type": "string", "format": "path" },
+        "salmon_index": { "type": "string", "format": "path" },
+        "auto_download": { "type": "boolean" }
+      },
+      "required": ["transcripts_fa", "annotation_gtf", "salmon_index"]
+    },
+    "fastqc": {
+      "type": "object",
+      "properties": {
+        "extra": { "type": "string" }
+      }
+    },
+    "multiqc": {
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" }
+      }
+    },
+    "salmon": {
+      "type": "object",
+      "properties": {
+        "libtype": { "type": "string" },
+        "extra": { "type": "string" },
+        "threads": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["libtype", "threads"]
+    },
+    "r": {
+      "type": "object",
+      "properties": {
+        "design": { "type": "string" },
+        "contrast_variable": { "type": "string" },
+        "batch_column": { "type": ["string", "null"] },
+        "alpha": { "type": "number", "minimum": 0, "maximum": 1 },
+        "lfc_shrink": { "type": "boolean" },
+        "contrasts_file": { "type": "string", "format": "path" },
+        "gene_id_column": { "type": "string" },
+        "pvalue_adjust": { "type": "string" }
+      },
+      "required": ["design", "contrast_variable", "contrasts_file"]
+    },
+    "fgsea": {
+      "type": "object",
+      "properties": {
+        "genesets": { "type": ["string", "null"], "format": "path" },
+        "min_size": { "type": "integer", "minimum": 1 },
+        "max_size": { "type": "integer", "minimum": 1 },
+        "nperm": { "type": "integer", "minimum": 1 },
+        "padj_cutoff": { "type": "number", "minimum": 0, "maximum": 1 },
+        "score_column": { "type": "string" }
+      }
+    },
+    "report": {
+      "type": "object",
+      "properties": {
+        "author": { "type": "string" },
+        "title": { "type": "string" },
+        "output_html": { "type": "string" }
+      }
+    },
+    "paths": {
+      "type": "object",
+      "properties": {
+        "samples": { "type": "string", "format": "path" },
+        "outdir": { "type": "string" },
+        "logs": { "type": "string" },
+        "qc": { "type": "string" },
+        "salmon": { "type": "string" },
+        "counts": { "type": "string" },
+        "de": { "type": "string" },
+        "fgsea": { "type": "string" },
+        "report_dir": { "type": "string" }
+      },
+      "required": ["samples", "outdir"]
+    },
+    "containers": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "image": { "type": "string" }
+      }
+    },
+    "cache": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "dir": { "type": "string" },
+        "max_age_days": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "profiles": {
+        "type": "object",
+        "properties": {
+            "snakemake": {"type": "string"},
+            "nextflow": {"type": "string"}
+        }
+    }
+  },
+  "required": [
+    "project", "engine", "se", "threads", "memory_gb", "organism",
+    "reference", "paths", "salmon", "r", "report"
+  ]
+}
