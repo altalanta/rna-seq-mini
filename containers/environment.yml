@@ -1,0 +1,67 @@
+name: rnaseq-mini
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core Python tools
+  - python=3.11
+  - snakemake>=7
+  - nextflow>=24
+  - mamba
+  - pip
+  - ruff
+  - black
+  - yamllint
+  - pandas
+  - pyyaml
+  - rich
+  - click
+  - pytest
+  - pre-commit
+  - jsonschema # Using jsonschema now
+
+  # QC tools
+  - fastqc
+  - multiqc
+  - pigz
+
+  # Quantification tools
+  - salmon>=1.10
+  - samtools
+  - seqkit
+
+  # R environment
+  - r-base=4.3
+  - r-optparse
+  - r-tidyverse
+  - r-yaml
+  - r-data.table
+  - r-jsonlite
+  - r-ggplot2
+  - r-pheatmap
+  - r-patchwork
+  - bioconductor-deseq2
+  - bioconductor-tximport
+  - bioconductor-tximportdata
+  - bioconductor-annotationdbi
+  - bioconductor-org.hs.eg.db
+  - bioconductor-org.sc.sgd.db
+  - bioconductor-biomart
+  - bioconductor-fgsea
+  - bioconductor-apeglm
+  - bioconductor-ensembldb
+  - r-rmarkdown
+  - r-quarto
+  - pandoc
+
+  # Utility tools
+  - git
+  - wget
+  - curl
+  - unzip
+  - openjdk
+
+  # Pip dependencies
+  - pip:
+      - snakemake-executor-plugin-slurm

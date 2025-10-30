@@ -12,15 +12,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Create base environment with core tools
-COPY envs/rnaseq-core.yml /tmp/core.yml
-RUN micromamba create -y -n rnaseq-core -f /tmp/core.yml && \
+# Create a single, unified environment
+COPY --chown=micromamba:micromamba containers/environment.yml /tmp/env.yml
+RUN micromamba create -y -n rnaseq-mini -f /tmp/env.yml && \
     micromamba clean -a -y
 
-# Create analysis environment with R and single-cell tools
-COPY envs/rnaseq-analysis.yml /tmp/analysis.yml
-RUN micromamba create -y -n rnaseq-analysis -f /tmp/analysis.yml && \
-    micromamba clean -a -y
+# Copy source code and install the package
+USER micromamba
+WORKDIR /tmp/install
+COPY --chown=micromamba:micromamba src ./src
+COPY --chown=micromamba:micromamba pyproject.toml .
+RUN micromamba run -n rnaseq-mini pip install .
+
 
 # Production stage - minimal runtime image
 FROM mambaorg/micromamba:1.5.1
@@ -32,15 +35,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     tini \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy environments from builder stage
-COPY --from=builder /opt/conda/envs/rnaseq-core /opt/conda/envs/rnaseq-core
-COPY --from=builder /opt/conda/envs/rnaseq-analysis /opt/conda/envs/rnaseq-analysis
+# Copy the unified environment from the builder stage
+COPY --from=builder /opt/conda/envs/rnaseq-mini /opt/conda/envs/rnaseq-mini
 
-# Create symlink for default environment
-RUN ln -sf /opt/conda/envs/rnaseq-core /opt/conda/envs/default
-
-# Set environment variables
-ENV PATH=/opt/conda/envs/rnaseq-core/bin:/opt/conda/envs/rnaseq-analysis/bin:$PATH
+# Set environment variables to use the new environment by default
+ENV PATH=/opt/conda/envs/rnaseq-mini/bin:$PATH
+ENV MAMBA_DEFAULT_ENV=rnaseq-mini
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 WORKDIR /workspace
 
