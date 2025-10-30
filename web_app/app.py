@@ -9,9 +9,17 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.wsgi import WSGIMiddleware
 import uvicorn
 
+# Import the dashboard creation function
+from web_app.dashboard import create_dashboard
+
 app = FastAPI(title="RNASEQ-MINI Web Interface")
+
+# Create and mount the Dash dashboard
+dash_app = create_dashboard(app)
+app.mount("/interactive", WSGIMiddleware(dash_app.server))
 
 # Mount static files
 static_dir = Path(__file__).parent / "static"
