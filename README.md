@@ -12,6 +12,9 @@ git clone <repository-url>
 cd rnaseq-mini
 make setup
 
+# Build the container (one-time)
+docker build -t rnaseq-mini:latest -f containers/Dockerfile .
+
 # Configure inputs (edit config files or use wizard)
 python scripts/setup_wizard.py
 
@@ -34,6 +37,7 @@ make serve-results
 - **Interactive Reporting** - HTML + web dashboard
 
 **Key Features:**
+- **Fully Containerized** - Guaranteed reproducibility with Docker
 - **Dual Workflow Engines** - Snakemake & Nextflow support
 - **Intelligent Caching** - 60-80% faster re-runs
 - **Single-Cell Analysis** - 10x Genomics, spatial transcriptomics
@@ -54,23 +58,23 @@ make serve-results
 
 ## 🛠️ Installation
 
+This project is designed to be run within a Docker container, which provides a fully reproducible environment.
+
+**Prerequisites:**
+- [Docker](https://docs.docker.com/get-docker/)
+
 ```bash
-# Basic installation (consolidated environments)
+# 1. Setup local helper environments and install pre-commit
 make setup
 
-# Validate environments after installation
-make env-health
+# 2. Build the Docker container
+docker build -t rnaseq-mini:latest -f containers/Dockerfile .
 
-# Full installation (includes all features)
-make setup-all
-
-# Enterprise deployment
-make enterprise-deploy
+# 3. Validate the setup
+make env-health # This will check your local helpers
 ```
 
-**Environment Structure:**
-- `rnaseq-core`: Python tools, Snakemake, Nextflow, QC, and quantification
-- `rnaseq-analysis`: R analysis tools and single-cell packages
+Your analysis will run inside the container, but the `make` commands are run from your local machine.
 
 ## 🤝 Real-Time Collaboration
 

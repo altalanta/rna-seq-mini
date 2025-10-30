@@ -49,8 +49,8 @@ paths:
   fgsea: "results/fgsea"
   report_dir: "results"
 containers:
-  enabled: false
-  image: "ghcr.io/example/rnaseq-mini:latest"
+  enabled: true
+  image: "docker://rnaseq-mini:latest"
 cache:
   enabled: true
   dir: ".cache"

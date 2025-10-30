@@ -1,16 +1,19 @@
-# Snakemake profile for local execution
+# Local execution profile for Snakemake
+# To use: snakemake --profile config/profiles/local
+
+# --- Cluster settings (not used for local) ---
+cluster: "echo 'This is a local profile.'"
+
+# --- Core settings ---
 cores: 8
-use-conda: true
+local-cores: 8
+jobs: 4
+max-jobs-per-second: 1
+max-status-checks-per-second: 1
 latency-wait: 60
-printshellcmds: true
-rerun-incomplete: true
-keep-going: true
-restart-times: 1
-conda-prefix: .snakemake/conda
-default-resources:
-  mem_mb: 4000
-  disk_mb: 1000
-  runtime: 60
-set-threads:
-  salmon_quant: 4
-  fastqc: 2
+use-conda: True
+
+# --- Apptainer/Singularity settings ---
+use-apptainer: True
+apptainer-args: "--bind /data,/tmp"
+apptainer-image: "docker://rnaseq-mini:latest"
