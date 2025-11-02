@@ -19,6 +19,8 @@ from utils.functions import (
     read_samples,
     sample_is_single_end,
 )
+import yaml
+
 # from utils.schema import validate_config # No longer needed
 
 # Import caching system
@@ -33,6 +35,17 @@ except ImportError:
     cache_manager = None
 
 configfile: "config/params.yaml"
+
+# Load genome configurations
+with open("config/genome.yaml") as f:
+    genome_config = yaml.safe_load(f)
+
+# Select the active organism's paths
+organism = config["organism_name"]
+if organism not in genome_config:
+    raise ValueError(f"Organism '{organism}' not found in config/genome.yaml")
+REFERENCE_CONFIG = genome_config[organism]
+
 
 # validate_config(config) # No longer needed, handled by script call above
 
@@ -64,7 +77,7 @@ SALMON_DIR = RESULTS_DIR / "salmon"
 COUNTS_DIR = RESULTS_DIR / "counts"
 DE_DIR = RESULTS_DIR / "de"
 FGSEA_DIR = RESULTS_DIR / "fgsea"
-SALMON_INDEX_DIR = Path(config["reference"]["salmon_index"])
+SALMON_INDEX_DIR = Path(REFERENCE_CONFIG["salmon_index"])
 TX2GENE = SALMON_INDEX_DIR / "tx2gene.tsv"
 DE_TABLE_PATHS = [DE_DIR / f"DE_{label}.tsv" for label in CONTRAST_LABELS]
 FGSEA_TABLE_PATHS = [FGSEA_DIR / f"fgsea_{label}.tsv" for label in CONTRAST_LABELS]

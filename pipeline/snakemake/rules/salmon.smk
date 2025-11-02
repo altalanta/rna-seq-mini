@@ -1,12 +1,50 @@
+rule download_references:
+    output:
+        transcripts=REFERENCE_CONFIG["transcripts_fa"],
+        annotation=REFERENCE_CONFIG["annotation_gtf"],
+        # Decoy can be null, so handle that case
+        decoy=REFERENCE_CONFIG.get("decoy_fasta") or touch(f"{REFERENCE_CONFIG['transcripts_fa']}.no_decoy")
+    params:
+        species=config["references"]["species"]
+    log:
+        LOG_DIR / "references" / "download.log"
+    conda:
+        "../../envs/rnaseq-core.yml"
+    threads: 1
+    run:
+        if config["references"]["auto_download"]:
+            # Check if all primary files exist
+            if not (Path(output.transcripts).exists() and Path(output.annotation).exists()):
+                shell("""
+                    python scripts/download_references.py {params.species} > {log} 2>&1
+                """)
+            else:
+                print(f"References for {params.species} already exist, skipping download.")
+                # Ensure output files are touched so Snakemake knows they are "created"
+                shell("touch {output.transcripts} {output.annotation}")
+                if "{output.decoy}".endswith(".no_decoy"):
+                    shell("touch {output.decoy}")
+        else:
+            print("Automated reference download is disabled.")
+            # If disabled, we still need to touch the output files to satisfy Snakemake,
+            # assuming they exist at the specified paths.
+            shell("touch {output.transcripts} {output.annotation}")
+            if "{output.decoy}".endswith(".no_decoy"):
+                shell("touch {output.decoy}")
+            elif REFERENCE_CONFIG.get("decoy_fasta"):
+                 shell("touch {output.decoy}")
+
 rule salmon_index:
     input:
-        transcripts=config["reference"]["transcripts_fa"],
-        annotation=config["reference"]["annotation_gtf"]
+        transcripts=rules.download_references.output.transcripts,
+        annotation=rules.download_references.output.annotation,
+        decoy=rules.download_references.output.decoy
     output:
         index=directory(str(SALMON_INDEX_DIR)),
         tx2gene=SALMON_INDEX_DIR / "tx2gene.tsv"
     params:
-        decoy=config["reference"].get("decoy_fasta")
+        # Pass the original decoy path, which might be null
+        decoy=REFERENCE_CONFIG.get("decoy_fasta")
     log:
         LOG_DIR / "salmon" / "index.log"
     threads: config["salmon"]["threads"]

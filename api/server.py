@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
 import uuid
+import subprocess
+import yaml
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -151,6 +153,20 @@ class RNASEQMiniAPI:
                 "limit": limit,
                 "offset": offset
             }
+
+        @self.app.get("/api/v1/pipeline/jobs/{job_id}/log", response_class=FileResponse)
+        async def get_job_log(job_id: str):
+            """Get the log file for a specific pipeline job."""
+            if job_id not in self.analysis_jobs:
+                raise HTTPException(status_code=404, detail="Job not found")
+            
+            job = self.analysis_jobs[job_id]
+            log_file = job.get("log_file")
+
+            if not log_file or not Path(log_file).exists():
+                raise HTTPException(status_code=404, detail="Log file not found for this job.")
+
+            return FileResponse(log_file, media_type="text/plain", filename=f"job_{job_id}.log")
 
         # Configuration endpoints
         @self.app.get("/api/v1/config/validate")
@@ -385,35 +401,71 @@ class RNASEQMiniAPI:
             self.analysis_jobs[job_id]["status"] = "running"
             self.analysis_jobs[job_id]["started_at"] = datetime.now().isoformat()
 
-            # Execute pipeline (placeholder implementation)
-            # In practice, this would call the actual pipeline execution
-            results = {
-                "status": "completed",
-                "output_files": [],
-                "metrics": {},
-                "completed_at": datetime.now().isoformat()
-            }
+            # Create a dedicated results directory for this job
+            results_dir = Path("results") / f"job_{job_id}"
+            results_dir.mkdir(parents=True, exist_ok=True)
+            self.analysis_jobs[job_id]["results_dir"] = str(results_dir)
 
-            # Update job with results
-            self.analysis_jobs[job_id]["status"] = "completed"
-            self.analysis_jobs[job_id]["results"] = results
-            self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+            # Create a temporary params file for the run
+            params_file = results_dir / "params.yaml"
+            with open("config/params.yaml") as f:
+                run_config = yaml.safe_load(f)
 
-            # Trigger completion webhook if configured
-            asyncio.create_task(self._trigger_completion_webhook(job_id, results))
+            # Override params with API request, but enforce the new results_dir
+            run_config.update(parameters.get("config", {}))
+            run_config["results_dir"] = str(results_dir)
+            
+            with open(params_file, 'w') as f:
+                yaml.dump(run_config, f)
 
-            logger.info(f"Pipeline job {job_id} completed successfully")
+            engine = run_config.get("engine", "snakemake")
+            log_file = results_dir / "pipeline.log"
+            self.analysis_jobs[job_id]["log_file"] = str(log_file)
+
+            cmd = []
+            if engine == "snakemake":
+                cmd = [
+                    "snakemake",
+                    "-s", "pipeline/snakemake/Snakefile",
+                    "--configfile", str(params_file),
+                    "--use-conda",
+                    "--cores", str(run_config.get("threads", 2)),
+                ]
+            elif engine == "nextflow":
+                cmd = [
+                    "nextflow", "run", "pipeline/nextflow/main.nf",
+                    "-params-file", str(params_file),
+                    "-with-conda",
+                    "-profile", "local",
+                    "--results_dir", str(results_dir),
+                ]
+
+            with open(log_file, "w") as log:
+                process = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
+
+            self.analysis_jobs[job_id]["process_pid"] = process.pid
+            process.wait() # Wait for the process to complete
+
+            if process.returncode == 0:
+                # Update job with results
+                self.analysis_jobs[job_id]["status"] = "completed"
+                self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+                # Trigger completion webhook if configured
+                asyncio.run(self._trigger_completion_webhook(job_id, {"results_dir": str(results_dir)}))
+                logger.info(f"Pipeline job {job_id} completed successfully")
+            else:
+                raise RuntimeError(f"Pipeline exited with non-zero status: {process.returncode}")
 
         except Exception as e:
             logger.error(f"Error executing pipeline job {job_id}: {e}")
-
+            error_message = f"{e}\n\n{traceback.format_exc()}"
             # Update job with error
             self.analysis_jobs[job_id]["status"] = "failed"
-            self.analysis_jobs[job_id]["error"] = str(e)
+            self.analysis_jobs[job_id]["error"] = error_message
             self.analysis_jobs[job_id]["failed_at"] = datetime.now().isoformat()
 
             # Trigger error webhook if configured
-            asyncio.create_task(self._trigger_error_webhook(job_id, str(e)))
+            asyncio.run(self._trigger_error_webhook(job_id, error_message))
 
     async def _trigger_completion_webhook(self, job_id: str, results: Dict):
         """Trigger webhook for job completion."""
