@@ -1,7 +1,7 @@
 project: "rnaseq-mini"
 engine: "snakemake"        # snakemake or nextflow
 se: false                   # single-end reads if true
-threads: 8
+threads: 4
 memory_gb: 32
 organism: "yeast"
 reference:
@@ -201,3 +201,20 @@ troubleshooting:
 profiles:
   snakemake: "config/profiles/local.smk.yaml"
   nextflow: "config/profiles/local.nf.config"
+
+# Reference genome parameters
+# `organism_name` should match a key in `config/genome.yaml` (e.g., "yeast", "human")
+organism_name: "yeast"
+
+# Automated reference management
+# If enabled, the pipeline will attempt to download the required reference files
+# and build the Salmon index if they are not found at the paths specified in
+# `config/genome.yaml`.
+references:
+  auto_download: true
+  # The `species` key should match one of the presets in `scripts/download_references.py`
+  # (e.g., "yeast", "human", "mouse").
+  species: "yeast"
+
+# Input/output directories
+fastq_dir: "tests/data/fastq/"
