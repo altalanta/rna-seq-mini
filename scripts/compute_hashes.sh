@@ -40,18 +40,21 @@ cd "$RESULTS_DIR" || { echo "Error: Cannot enter results directory '$RESULTS_DIR
 echo "[hash] Computing hashes for key outputs in '$RESULTS_DIR'..."
 
 # Ensure hash file is empty before starting
-rm -f "../$HASH_FILE"
-touch "../$HASH_FILE"
+TMP_HASHES=$(mktemp)
 
 # Compute SHA256 hashes
 for file in "${FILES_TO_HASH[@]}"; do
     if [[ -f "$file" ]]; then
         # Using relative paths in the hash file for consistency
-        sha256sum "$file" >> "../$HASH_FILE"
+        sha256sum "$file" >> "$TMP_HASHES"
     else
         echo "Warning: $file not found in '$RESULTS_DIR', skipping"
     fi
 done
+
+# Sort by the second column (filename) for deterministic output
+sort -k 2 "$TMP_HASHES" > "../$HASH_FILE"
+rm "$TMP_HASHES"
 
 echo "[hash] Hashes written to $HASH_FILE"
 

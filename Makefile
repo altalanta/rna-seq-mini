@@ -46,6 +46,40 @@ smoke: ## Execute smoke test over toy dataset
 validate: ## Validate cross-engine reproducibility
 	@conda run -n $(PY_ENV) python scripts/validate_determinism.py
 
+# Determinism Validation
+.PHONY: check-hashes update-hashes
+
+check-hashes: ## Run smoke test and check output hashes against a reference file
+	@if [ ! -f tests/validation/expected_hashes.sha256 ]; then \
+		echo "ERROR: Reference hash file not found."; \
+		echo "Please generate it by running 'make update-hashes' and commit the result."; \
+		exit 1; \
+	fi
+	@echo "🧪 Running smoke test for determinism check..."
+	@PIPELINE_ENGINE=snakemake tests/run_smoke.sh results-smoke-check
+	@echo " hashlib Computing hashes for new results..."
+	@scripts/compute_hashes.sh results-smoke-check generated_hashes.sha256
+	@echo "    Comparing against reference hashes..."
+	@if ! diff -q tests/validation/expected_hashes.sha256 generated_hashes.sha256; then \
+		echo "❌ HASH MISMATCH DETECTED!"; \
+		echo "Differences between tests/validation/expected_hashes.sha256 (expected) and generated_hashes.sha256 (generated):"; \
+		diff tests/validation/expected_hashes.sha256 generated_hashes.sha256; \
+		rm generated_hashes.sha256; \
+		exit 1; \
+	fi
+	@echo "✅ Determinism check passed!"
+	@rm generated_hashes.sha256
+	@rm -rf results-smoke-check
+
+update-hashes: ## Generate/update the reference hash file from a fresh smoke test run
+	@echo "🛠️  Running smoke test to generate new reference hashes..."
+	@PIPELINE_ENGINE=snakemake tests/run_smoke.sh results-smoke-ref
+	@mkdir -p tests/validation
+	@echo " hashlib Computing and saving new reference hashes..."
+	@scripts/compute_hashes.sh results-smoke-ref tests/validation/expected_hashes.sha256
+	@echo "✅ New reference hashes saved to tests/validation/expected_hashes.sha256"
+	@rm -rf results-smoke-ref
+
 download-refs: ## Download reference genomes for specified species
 	@conda run -n $(PY_ENV) python scripts/download_references.py $(SPECIES)
 
