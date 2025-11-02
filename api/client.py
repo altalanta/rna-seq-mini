@@ -130,6 +130,13 @@ class RNASEQMiniClient:
             response.raise_for_status()
             return await response.json()
 
+    async def get_job_log(self, job_id: str) -> bytes:
+        """Get the log file for a specific job."""
+        await self._ensure_session()
+        async with self.session.get(f"{self.base_url}/api/v1/pipeline/jobs/{job_id}/log") as response:
+            response.raise_for_status()
+            return await response.read()
+
     async def wait_for_job_completion(self, job_id: str, check_interval: int = 5) -> Dict[str, Any]:
         """
         Wait for a job to complete and return results.
@@ -340,6 +347,10 @@ class RNASEQMiniClientSync:
     def list_jobs(self, limit: int = 50, offset: int = 0) -> Dict[str, Any]:
         """Synchronous job listing."""
         return asyncio.run(self.client.list_jobs(limit, offset))
+
+    def get_job_log(self, job_id: str) -> bytes:
+        """Synchronous job log retrieval."""
+        return asyncio.run(self.client.get_job_log(job_id))
 
     def wait_for_job_completion(self, job_id: str, check_interval: int = 5) -> Dict[str, Any]:
         """Synchronous job completion waiting."""
