@@ -113,3 +113,5 @@ def test_check_paths_failure():
         "r": {"contrasts_file": "nonexistent.tsv"}
     }
     assert check_paths(config) is False
+
+

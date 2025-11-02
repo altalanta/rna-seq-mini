@@ -57,3 +57,5 @@ def test_tpm_table_normalization():
     for col in sample_cols:
         # Check that the sum of TPM values is close to 1 million
         assert np.isclose(df[col].sum(), 1e6, rtol=1e-3), f"TPM column '{col}' does not sum to 1e6."
+
+
