@@ -115,3 +115,5 @@ def create_dashboard(server):
         return fig, columns, data
 
     return dash_app
+
+
