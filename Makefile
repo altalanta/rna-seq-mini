@@ -182,6 +182,20 @@ power-analysis: ## Estimate statistical power for DE analysis
 ai-insights: ## Run AI-powered result interpretation and insights
 	@conda run -n $(PY_ENV) python scripts/ai_insights.py analyze --results-dir results --format both
 
+# Docker commands
+.PHONY: docker-build docker-run-smoke
+
+docker-build: ## Build the Docker image for the pipeline
+	@echo "🛠️ Building Docker image..."
+	@docker build -t rnaseq-mini:latest .
+
+docker-run-smoke: ## Run the smoke test inside the Docker container
+	@echo "🧪 Running smoke test in Docker..."
+	@export LOCAL_USER_ID=$(shell id -u) && \
+	export LOCAL_GROUP_ID=$(shell id -g) && \
+	docker-compose -f deployments/docker-compose.yml run --rm rnaseq-mini \
+		bash -c "cp -r /app/* /workspace/ && bash tests/run_smoke.sh"
+
 pathway-impact: ## Run advanced pathway impact analysis
 	@conda run -n $(PY_ENV) python scripts/pathway_impact_analyzer.py --results-dir results --format both
 
