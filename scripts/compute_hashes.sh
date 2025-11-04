@@ -57,4 +57,3 @@ sort -k 2 "$TMP_HASHES" > "../$HASH_FILE"
 rm "$TMP_HASHES"
 
 echo "[hash] Hashes written to $HASH_FILE"
-

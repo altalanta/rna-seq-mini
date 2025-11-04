@@ -762,18 +762,3 @@ class SingleCellVisualizer:
         return html
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

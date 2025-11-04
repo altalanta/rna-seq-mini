@@ -720,18 +720,3 @@ class SpatialAnalyzer:
             return ""
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

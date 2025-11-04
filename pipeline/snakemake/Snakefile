@@ -117,5 +117,5 @@ rule all:
         DE_DIR / "de_summary.tsv",
         expand(DE_DIR / "DE_{label}.tsv", label=CONTRAST_LABELS),
         FGSEA_DIR / "fgsea_summary.tsv",
-        # Single-cell outputs (if enabled)
-        SINGLECELL_DIR / ".singlecell_complete" if config.get("singlecell", {}).get("enabled", False) else []
+        # Conditionally include single-cell output
+        SINGLECELL_OUTPUT_DIR / ".singlecell_complete" if config.get("singlecell", {}).get("enabled", False) else []
