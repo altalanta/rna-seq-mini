@@ -56,71 +56,24 @@ cache:
   dir: ".cache"
   max_age_days: 30
 singlecell:
-  enabled: false              # Enable single-cell analysis mode
-  technology: "auto"          # auto, 10x, dropseq, smartseq, spatial
-  chemistry: "auto"           # auto, v2, v3 for 10x
-
-  # Quantification parameters
-  quantification:
-    method: "auto"            # auto, cellranger, kallisto, starsolo, alevin
-    min_umi: 500
-    min_genes: 200
-    max_mito_percent: 10.0
-    include_introns: true
-    estimate_complexity: true
-
-  # Quality control parameters
-  qc:
-    adapter_trimming: true
-    poly_a_trimming: true
-    quality_filtering: true
+  enabled: false
+  # Path to the directory containing the 10x formatted matrix, barcodes, and features files.
+  # This is the primary input for the single-cell analysis workflow.
+  input_dir: "path/to/your/10x_data"
+  
+  # Analysis parameters for the Scanpy workflow
+  analysis:
     min_genes_per_cell: 200
-    max_genes_per_cell: 6000
-    mito_percent_threshold: 10.0
-
-  # Clustering parameters
-  clustering:
-    normalization_method: "log_normalize"  # log_normalize, scran, sct
-    n_pcs: 50
-    n_neighbors: 10
-    resolution: 1.0
-    clustering_method: "leiden"            # leiden, louvain, kmeans
-
-  # Annotation parameters
-  annotation:
-    method: "auto"            # auto, celltypist, scpred, manual
-    reference: "auto"         # auto, human, mouse, custom
-    marker_genes: null
-
-  # Visualization parameters
-  visualization:
-    save_plots: true
-    plot_formats: ["png", "pdf", "svg"]
-    color_by: ["leiden", "condition", "sample"]
-    n_markers: 20
+    min_cells_per_gene: 3
+    max_mito_percent: 15.0
+    n_pcs: 30
+    n_neighbors: 15
+    clustering_resolution: 0.5
 
   # Output paths
   paths:
-    quantification: "results/singlecell/quantification"
-    qc: "results/singlecell/qc"
-    clustering: "results/singlecell/clustering"
-    annotation: "results/singlecell/annotation"
-    visualization: "results/singlecell/visualization"
-    report: "results/singlecell/report"
+    output_dir: "results/singlecell/analysis"
 
-  # Performance parameters
-  threads: 8
-  memory_gb: 32
-
-  # Advanced parameters
-  integration:
-    enabled: false
-    method: "harmony"         # harmony, scanorama, bbknn
-
-  # Spatial transcriptomics (if applicable)
-  spatial:
-    enabled: false
-    technology: "auto"        # auto, visium, slideseq, merfish
 
 # Dynamic resource optimization
 optimization:
