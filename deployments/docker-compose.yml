@@ -1,16 +1,30 @@
-version: '3.8'
+version: "3.8"
 
 services:
   rnaseq-mini:
     build:
       context: ..
       dockerfile: containers/Dockerfile
-    container_name: rnaseq-mini
+    image: rnaseq-mini:latest
+    # The command to run inside the container.
+    # This will be overridden by command-line arguments.
+    # For example: docker-compose run --rm rnaseq-mini snakemake --cores 2
+    command: ["bash"]
+    # Pass the local user's UID and GID to the entrypoint script
+    # This ensures that files created in the container have the correct ownership.
+    environment:
+      - LOCAL_USER_ID=${LOCAL_USER_ID:-1000}
+      - LOCAL_GROUP_ID=${LOCAL_GROUP_ID:-1000}
+    working_dir: /workspace
     volumes:
-      - ../data:/app/data
-      - ../results:/app/results
-      - ../config:/app/config
-      - ../references:/app/references
+      # Mount the entire project directory for access to configs, data, etc.
+      # Use .. to refer to the project root from the deployments directory.
+      - ../:/workspace
+      # You can also mount specific directories for more granular control:
+      # - ../config:/workspace/config
+      # - ../results:/workspace/results
+      # - ../references:/workspace/references
+      # - ../tests/data:/workspace/tests/data
     environment:
       - PYTHONPATH=/app
       - MPLBACKEND=Agg
@@ -82,7 +96,3 @@ networks:
 volumes:
   postgres_data:
   redis_data:
-
-
-
-

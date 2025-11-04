@@ -6,6 +6,7 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     tini \
+    gosu \
     git \
     wget \
     curl \
@@ -33,10 +34,19 @@ USER root
 RUN apt-get update && apt-get install -y --no-install-recommends \
     procps \
     tini \
+    gosu \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy the unified environment from the builder stage
 COPY --from=builder /opt/conda/envs/rnaseq-mini /opt/conda/envs/rnaseq-mini
+
+# Copy the entire project directory into the container
+COPY . /app
+WORKDIR /app
+
+# Copy the entrypoint script and make it executable
+COPY containers/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set environment variables to use the new environment by default
 ENV PATH=/opt/conda/envs/rnaseq-mini/bin:$PATH
@@ -44,5 +54,8 @@ ENV MAMBA_DEFAULT_ENV=rnaseq-mini
 ENV MAMBA_ROOT_PREFIX=/opt/conda
 WORKDIR /workspace
 
+# Use tini as the subreaper and run the entrypoint
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/local/bin/entrypoint.sh"]
+
 # Default command
-CMD ["/bin/bash"]
+CMD ["bash"]

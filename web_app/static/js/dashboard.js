@@ -2451,8 +2451,3 @@ function restoreStateFromUrl() {
         }
     }
 }
-
-
-
-
-

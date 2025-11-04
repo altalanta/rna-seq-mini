@@ -40,4 +40,3 @@ dependencies:
   # Pip dependencies (from base.yml)
   - pip:
       - snakemake-executor-plugin-slurm
-
