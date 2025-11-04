@@ -447,12 +447,12 @@ class RNASEQMiniAPI:
             process.wait() # Wait for the process to complete
 
             if process.returncode == 0:
-                # Update job with results
-                self.analysis_jobs[job_id]["status"] = "completed"
-                self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
-                # Trigger completion webhook if configured
+            # Update job with results
+            self.analysis_jobs[job_id]["status"] = "completed"
+            self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+            # Trigger completion webhook if configured
                 asyncio.run(self._trigger_completion_webhook(job_id, {"results_dir": str(results_dir)}))
-                logger.info(f"Pipeline job {job_id} completed successfully")
+            logger.info(f"Pipeline job {job_id} completed successfully")
             else:
                 raise RuntimeError(f"Pipeline exited with non-zero status: {process.returncode}")
 

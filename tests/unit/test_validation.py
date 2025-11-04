@@ -26,19 +26,19 @@ def temp_config_files(tmp_path):
         },
         "required": ["project", "threads", "reference"]
     }
-    
+
     valid_config = {
         "project": "test-project",
         "threads": 4,
         "reference": { "transcripts_fa": str(tmp_path / "transcripts.fa") }
     }
-    
+
     invalid_type_config = {
         "project": "test-project",
         "threads": "four", # Incorrect type
         "reference": { "transcripts_fa": str(tmp_path / "transcripts.fa") }
     }
-    
+
     missing_key_config = {
         "project": "test-project",
         "reference": { "transcripts_fa": str(tmp_path / "transcripts.fa") }
@@ -49,7 +49,7 @@ def temp_config_files(tmp_path):
     valid_config_path = tmp_path / "valid_config.yaml"
     invalid_type_path = tmp_path / "invalid_type.yaml"
     missing_key_path = tmp_path / "missing_key.yaml"
-    
+
     with open(schema_path, 'w') as f:
         json.dump(schema, f)
     with open(valid_config_path, 'w') as f:
@@ -58,7 +58,7 @@ def temp_config_files(tmp_path):
         yaml.dump(invalid_type_config, f)
     with open(missing_key_path, 'w') as f:
         yaml.dump(missing_key_config, f)
-        
+
     # Create a dummy data file for the path check
     (tmp_path / "transcripts.fa").touch()
 
@@ -97,7 +97,7 @@ def test_check_paths_success(temp_config_files):
     # We need a mock config object similar to what the validator would return
     with open(temp_config_files["valid"]) as f:
         config = yaml.safe_load(f)
-    
+
     # Manually create mock paths for other checks in the function
     config['paths'] = {'samples': temp_config_files['data_file']}
     config['r'] = {'contrasts_file': temp_config_files['data_file']}
