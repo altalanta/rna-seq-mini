@@ -14,6 +14,11 @@ from datetime import datetime
 import uuid
 import subprocess
 import yaml
+import sys
+
+# Add src to the Python path to allow importing the logger module
+sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
+from rnaseq_mini.logger import get_logger
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -33,8 +38,7 @@ except ImportError:
 
 
 # Set up logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+log = get_logger("api")
 
 
 class RNASEQMiniAPI:
@@ -76,7 +80,7 @@ class RNASEQMiniAPI:
         # Setup routes
         self._setup_routes()
 
-        logger.info(f"RNASEQ-MINI API initialized on {self.host}:{self.port}")
+        log.info("api_initialized", host=self.host, port=self.port)
 
     def _setup_routes(self):
         """Setup all API routes."""
@@ -113,6 +117,7 @@ class RNASEQMiniAPI:
         async def run_pipeline(request: Dict[str, Any], background_tasks: BackgroundTasks):
             """Run RNA-seq pipeline analysis."""
             job_id = str(uuid.uuid4())
+            log.info("pipeline_run_requested", job_id=job_id, params=request)
 
             # Store job information
             self.analysis_jobs[job_id] = {
@@ -137,6 +142,7 @@ class RNASEQMiniAPI:
         async def get_job_status(job_id: str):
             """Get status of a pipeline job."""
             if job_id not in self.analysis_jobs:
+                log.warn("job_not_found", job_id=job_id)
                 raise HTTPException(status_code=404, detail="Job not found")
 
             return self.analysis_jobs[job_id]
@@ -212,7 +218,7 @@ class RNASEQMiniAPI:
                 }
 
             except Exception as e:
-                logger.error(f"Error optimizing config: {e}")
+                log.error("error_optimizing_config", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Quality assessment endpoints
@@ -235,7 +241,7 @@ class RNASEQMiniAPI:
                 }
 
             except Exception as e:
-                logger.error(f"Error assessing quality: {e}")
+                log.error("error_assessing_quality", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Multi-omics endpoints
@@ -269,7 +275,7 @@ class RNASEQMiniAPI:
                 }
 
             except Exception as e:
-                logger.error(f"Error integrating multiomics: {e}")
+                log.error("error_integrating_multiomics", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Cache management endpoints
@@ -284,7 +290,7 @@ class RNASEQMiniAPI:
                 return {"success": True, "stats": stats}
 
             except Exception as e:
-                logger.error(f"Error getting cache stats: {e}")
+                log.error("error_getting_cache_stats", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.post("/api/v1/cache/cleanup")
@@ -306,7 +312,7 @@ class RNASEQMiniAPI:
                 }
 
             except Exception as e:
-                logger.error(f"Error cleaning cache: {e}")
+                log.error("error_cleaning_cache", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Export endpoints
@@ -330,7 +336,7 @@ class RNASEQMiniAPI:
                     raise HTTPException(status_code=404, detail="Export file not found")
 
             except Exception as e:
-                logger.error(f"Error exporting results: {e}")
+                log.error("error_exporting_results", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Webhook endpoints
@@ -352,7 +358,7 @@ class RNASEQMiniAPI:
                 }
 
             except Exception as e:
-                logger.error(f"Error triggering webhook: {e}")
+                log.error("error_triggering_webhook", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         # Plugin endpoints
@@ -368,7 +374,7 @@ class RNASEQMiniAPI:
                 return {"success": True, "plugins": plugins}
 
             except Exception as e:
-                logger.error(f"Error listing plugins: {e}")
+                log.error("error_listing_plugins", error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.post("/api/v1/plugins/{plugin_name}/execute")
@@ -389,13 +395,13 @@ class RNASEQMiniAPI:
                 }
 
             except Exception as e:
-                logger.error(f"Error executing plugin {plugin_name}: {e}")
+                log.error("error_executing_plugin", plugin_name=plugin_name, error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
     def _execute_pipeline_job(self, job_id: str, parameters: Dict[str, Any]):
         """Execute pipeline job in background."""
         try:
-            logger.info(f"Starting pipeline job {job_id}")
+            log.info("pipeline_job_started", job_id=job_id)
 
             # Update job status
             self.analysis_jobs[job_id]["status"] = "running"
@@ -447,18 +453,18 @@ class RNASEQMiniAPI:
             process.wait() # Wait for the process to complete
 
             if process.returncode == 0:
-            # Update job with results
-            self.analysis_jobs[job_id]["status"] = "completed"
-            self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
-            # Trigger completion webhook if configured
+                # Update job with results
+                self.analysis_jobs[job_id]["status"] = "completed"
+                self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+                # Trigger completion webhook if configured
                 asyncio.run(self._trigger_completion_webhook(job_id, {"results_dir": str(results_dir)}))
-            logger.info(f"Pipeline job {job_id} completed successfully")
+                log.info("pipeline_job_completed", job_id=job_id, results_dir=str(results_dir))
             else:
                 raise RuntimeError(f"Pipeline exited with non-zero status: {process.returncode}")
 
         except Exception as e:
-            logger.error(f"Error executing pipeline job {job_id}: {e}")
             error_message = f"{e}\n\n{traceback.format_exc()}"
+            log.error("pipeline_job_failed", job_id=job_id, error=str(e), traceback=traceback.format_exc())
             # Update job with error
             self.analysis_jobs[job_id]["status"] = "failed"
             self.analysis_jobs[job_id]["error"] = error_message
@@ -510,7 +516,7 @@ class RNASEQMiniAPI:
 
     def run(self):
         """Start the API server."""
-        logger.info(f"Starting RNASEQ-MINI API server on {self.host}:{self.port}")
+        log.info("api_server_starting", host=self.host, port=self.port)
 
         uvicorn.run(
             self.app,
