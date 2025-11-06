@@ -37,3 +37,5 @@ else
     echo "  docker run --rm -it -v \$(pwd)/config:/workspace/config -v \$(pwd)/results:/workspace/results rnaseq-mini snakemake --cores 2"
     exit 1
 fi
+
+

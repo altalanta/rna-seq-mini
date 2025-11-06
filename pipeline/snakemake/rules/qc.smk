@@ -9,11 +9,13 @@ rule fastqc:
     threads: 2
     resources:
         mem_mb=2000
-    conda: "../../envs/qc.yml"
+    conda: "../../envs/rnaseq-core.yml"
     shell:
         """
-        mkdir -p {LOG_DIR / "fastqc"}
-        fastqc {config["fastqc"]["extra"]} --threads {threads} --outdir {QC_FASTQC_DIR} {input.fastq} > {log} 2>&1
+        python scripts/run_stage.py fastqc \\
+            --fastq {input.fastq} \\
+            --outdir {output.outdir} \\
+            --threads {threads} > {log} 2>&1
         """
 
 
@@ -27,9 +29,11 @@ rule multiqc:
     threads: 2
     resources:
         mem_mb=2000
-    conda: "../../envs/qc.yml"
+    conda: "../../envs/rnaseq-core.yml"
     shell:
         """
-        mkdir -p {LOG_DIR / "multiqc"}
-        multiqc {QC_FASTQC_DIR} --filename multiqc_report.html --outdir {QC_MULTIQC_DIR} > {log} 2>&1
+        python scripts/run_stage.py multiqc \\
+            --analysis-dir {QC_FASTQC_DIR} \\
+            --title "{config[multiqc][title]}" \\
+            --outdir {QC_MULTIQC_DIR} > {log} 2>&1
         """

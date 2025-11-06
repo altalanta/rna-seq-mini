@@ -172,18 +172,20 @@ rule salmon_quant:
                         metadata={'stage': 'salmon_quant', 'sample': wildcards.sample}
                     )
         else:
+            # Paired-end reads
+            if "{input.fastq2}" != "None" and Path("{input.fastq2}").exists():
+                fastq2_arg = "--fastq2 {input.fastq2}"
+            else: # Single-end reads
+                fastq2_arg = ""
+
             # Run without caching
             shell("""
-                mkdir -p {SALMON_DIR / wildcards.sample}
-                mkdir -p {LOG_DIR / "salmon"}
-                if [ -n "{input.fastq2}" ] && [ "{input.fastq2}" != "None" ] && [ "{SEQUENCING_MODE}" = "paired" ]; then \
-                  salmon quant -i {input.index} --libType {config["salmon"]["libtype"]} \
-                    -1 {input.fastq1} -2 {input.fastq2} \
-                    --threads {threads} {config["salmon"]["extra"]} \
-                    -o {SALMON_DIR / wildcards.sample} > {log} 2>&1; \
-                else \
-                  salmon quant -i {input.index} --libType {config["salmon"]["libtype"]} \
-                    -r {input.fastq1} --threads {threads} {config["salmon"]["extra"]} \
-                    -o {SALMON_DIR / wildcards.sample} > {log} 2>&1; \
-                fi
+                python scripts/run_stage.py salmon_quant \\
+                    --index {input.index} \\
+                    --outdir {output.outdir} \\
+                    --libtype "{config[salmon][libtype]}" \\
+                    --threads {threads} \\
+                    --fastq1 {input.fastq1} \\
+                    {fastq2_arg} \\
+                    --extra-opts "{config[salmon][extra]}" > {log} 2>&1
             """)
