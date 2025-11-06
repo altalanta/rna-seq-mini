@@ -10,85 +10,119 @@ import json
 import argparse
 from pathlib import Path
 from jsonschema import validate, exceptions
+from typing import List, Optional
 
-def validate_config_against_schema(config_path, schema_path):
-    """Validate a YAML config file against a JSON schema."""
-    try:
-        with open(config_path, 'r') as f:
-            config = yaml.safe_load(f)
-    except FileNotFoundError:
-        print(f"❌ Error: Config file '{config_path}' not found.")
-        return False, None
-    except yaml.YAMLError as e:
-        print(f"❌ Error parsing YAML in '{config_path}': {e}")
-        return False, None
+from pydantic import BaseModel, Field, FilePath, DirectoryPath, field_validator
+import pandas as pd
 
-    try:
-        with open(schema_path, 'r') as f:
-            schema = json.load(f)
-    except FileNotFoundError:
-        print(f"❌ Error: Schema file '{schema_path}' not found.")
-        return False, None
-    except json.JSONDecodeError as e:
-        print(f"❌ Error parsing JSON in '{schema_path}': {e}")
-        return False, None
-        
-    try:
-        validate(instance=config, schema=schema)
-        print(f"✅ Schema validation passed for '{config_path}'.")
-        return True, config
-    except exceptions.ValidationError as e:
-        print(f"❌ Schema validation failed for '{config_path}':")
-        print(f"  - Message: {e.message}")
-        print(f"  - Path: {list(e.path)}")
-        print(f"  - Validator: {e.validator} = {e.validator_value}")
-        return False, None
+# --- Helper Validators ---
 
-def check_paths(config):
-    """Check that all file paths in the config exist."""
-    print("🔍 Checking file paths...")
-    all_paths_exist = True
+class SamplesTsv(BaseModel):
+    sample: str
+    fastq_1: FilePath
+    fastq_2: Optional[FilePath] = None
+    condition: str
     
-    paths_to_check = [
-        config['reference']['transcripts_fa'],
-        config['reference']['annotation_gtf'],
-        config['paths']['samples'],
-        config['r']['contrasts_file']
-    ]
-    
-    # Add decoy fasta if it's specified
-    if config.get('reference', {}).get('decoy_fasta'):
-        paths_to_check.append(config['reference']['decoy_fasta'])
+    # Allow extra columns like 'batch'
+    class Config:
+        extra = 'allow'
 
-    for file_path in paths_to_check:
-        if not Path(file_path).exists():
-            print(f"  - ❌ Missing file: {file_path}")
-            all_paths_exist = False
-        else:
-            print(f"  - ✅ Found file: {file_path}")
+class ContrastsTsv(BaseModel):
+    contrast_a: str
+    contrast_b: str
+
+# --- Main Configuration Models (params.yaml) ---
+
+class ReferenceConfig(BaseModel):
+    transcripts_fa: FilePath
+    annotation_gtf: FilePath
+    decoy_fasta: Optional[FilePath] = None
+    salmon_index: Path
+
+class SalmonConfig(BaseModel):
+    libtype: str = "A"
+    extra: str = "--validateMappings --gcBias"
+    threads: int = 4
+
+class RConfig(BaseModel):
+    design: str = "~ condition"
+    contrast_variable: str = "condition"
+    contrasts_file: FilePath
+
+class PathsConfig(BaseModel):
+    samples: FilePath
+    outdir: Path = "results"
+    logs: Path = "logs"
+
+class SingleCellAnalysisConfig(BaseModel):
+    min_genes_per_cell: int = 200
+    min_cells_per_gene: int = 3
+    max_mito_percent: float = 15.0
+    n_pcs: int = 30
+    n_neighbors: int = 15
+    clustering_resolution: float = 0.5
+
+class SingleCellPathsConfig(BaseModel):
+    output_dir: Path = "results/singlecell/analysis"
+
+class SingleCellConfig(BaseModel):
+    enabled: bool = False
+    input_dir: Optional[DirectoryPath] = None
+    analysis: SingleCellAnalysisConfig = Field(default_factory=SingleCellAnalysisConfig)
+    paths: SingleCellPathsConfig = Field(default_factory=SingleCellPathsConfig)
+
+    @field_validator('input_dir')
+    def check_input_dir_if_enabled(cls, v, values):
+        data = values.data
+        if data.get('enabled') and v is None:
+            raise ValueError("`input_dir` must be specified when single-cell analysis is enabled.")
+        return v
+
+class FullConfig(BaseModel):
+    engine: str = "snakemake"
+    threads: int
+    organism_name: str
+    reference: ReferenceConfig
+    salmon: SalmonConfig
+    r: RConfig
+    paths: PathsConfig
+    singlecell: SingleCellConfig = Field(default_factory=SingleCellConfig)
+
+    @field_validator('engine')
+    def engine_must_be_valid(cls, v):
+        if v not in ["snakemake", "nextflow"]:
+            raise ValueError("Engine must be 'snakemake' or 'nextflow'")
+        return v
+
+# --- Main Validation Function ---
+
+def load_and_validate_config(config_path: Path) -> FullConfig:
+    """Loads, parses, and validates all configuration files."""
+    import yaml
+    
+    # 1. Load and validate params.yaml
+    with open(config_path) as f:
+        config_dict = yaml.safe_load(f)
+    config = FullConfig.parse_obj(config_dict)
+
+    # 2. Load and validate samples.tsv
+    samples_df = pd.read_csv(config.paths.samples, sep='	')
+    samples_data = [SamplesTsv.parse_obj(row) for _, row in samples_df.iterrows()]
+
+    # 3. Load and validate contrasts.tsv
+    contrasts_df = pd.read_csv(config.r.contrasts_file, sep='	', header=None, names=['contrast_a', 'contrast_b'])
+    contrasts_data = [ContrastsTsv.parse_obj(row) for _, row in contrasts_df.iterrows()]
+    
+    # 4. Perform cross-validation
+    sample_conditions = {row.condition for row in samples_data}
+    for contrast in contrasts_data:
+        if contrast.contrast_a not in sample_conditions:
+            raise ValueError(f"Contrast value '{contrast.contrast_a}' not found in samples sheet condition column.")
+        if contrast.contrast_b not in sample_conditions:
+            raise ValueError(f"Contrast value '{contrast.contrast_b}' not found in samples sheet condition column.")
             
-    return all_paths_exist
+    if config.r.contrast_variable not in samples_df.columns:
+        raise ValueError(f"Contrast variable '{config.r.contrast_variable}' not found in samples sheet columns.")
 
-def main():
-    parser = argparse.ArgumentParser(description="Configuration validation for RNASEQ-MINI")
-    parser.add_argument('config_file', nargs='?', default='config/params.yaml', help='Configuration file to validate')
-    parser.add_argument('--schema', default='config/schema.json', help='JSON schema to validate against')
-    args = parser.parse_args()
-
-    schema_valid, config = validate_config_against_schema(args.config_file, args.schema)
-    
-    if not schema_valid:
-        return 1
-
-    paths_valid = check_paths(config)
-
-    if not paths_valid:
-        print("\n❌ Some file paths in the configuration do not exist.")
-        return 1
-        
-    print("\n🎉 Configuration is valid and all required files are present.")
-    return 0
-
-if __name__ == "__main__":
-    sys.exit(main())
+    return config
 
