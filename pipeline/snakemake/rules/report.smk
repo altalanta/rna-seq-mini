@@ -1,28 +1,22 @@
-rule report_html:
+rule render_report:
     input:
-        multiqc=QC_MULTIQC_DIR / "multiqc_report.html",
-        counts=COUNTS_DIR / "counts.tsv",
-        de_summary=DE_DIR / "de_summary.tsv",
-        fgsea=FGSEA_DIR / "fgsea_summary.tsv",
-        de_tables=DE_TABLE_PATHS,
-        fgsea_tables=FGSEA_TABLE_PATHS
+        de_summary=rules.run_deseq2.output.de_summary,
+        fgsea_summary=rules.run_fgsea.output.fgsea_summary,
+        samples=config["paths"]["samples"],
+        r_env=rules.run_deseq2.output.r_env
     output:
-        html=REPORT_HTML
+        report=REPORT_HTML
     log:
-        LOG_DIR / "r" / "report.log"
-    params:
-        template="report/rnaseq_report.Rmd",
-        results_dir=RESULTS_DIR
-    threads: 2
+        LOG_DIR / "report" / "render_report.log"
+    threads: 1
     resources:
         mem_mb=4000
-    conda: "../../envs/r.yml"
+    conda:
+        "../../envs/rnaseq-analysis.yml"
     shell:
         """
-        mkdir -p {LOG_DIR / "r"}
-        scripts/render_report.R \
-          --params config/params.yaml \
-          --template {params.template} \
-          --output {output.html} \
-          --results-dir {params.results_dir} > {log} 2>&1
+        python scripts/run_stage.py render_report \\
+            --config "config/params.yaml" \\
+            --samples {input.samples} \\
+            --r-env {input.r_env} > {log} 2>&1
         """

@@ -1,43 +1,33 @@
-rule tximport_deseq2:
+rule run_deseq2:
     input:
-        quant=expand(SALMON_DIR / "{sample}" / "quant.sf", sample=SAMPLES),
-        tx2gene=rules.salmon_index.output.tx2gene,
+        salmon_dir=SALMON_DIR,
         samples=config["paths"]["samples"],
-        contrasts=config["r"]["contrasts_file"]
+        contrasts=config["r"]["contrasts_file"],
+        tx2gene=rules.salmon_index.output.tx2gene
     output:
-        counts=COUNTS_DIR / "counts.tsv",
-        tpm=COUNTS_DIR / "tpm.tsv",
-        txi=COUNTS_DIR / "txi.rds",
-        dds=DE_DIR / "dds.rds",
-        summary=DE_DIR / "de_summary.tsv",
-        normalized=DE_DIR / "normalized_counts.tsv",
+        counts_table=COUNTS_DIR / "counts.tsv",
+        tpm_table=COUNTS_DIR / "tpm.tsv",
+        de_summary=DE_DIR / "de_summary.tsv",
+        r_env=DE_DIR / "deseq2_session_info.txt",
         de_tables=DE_TABLE_PATHS
     log:
-        LOG_DIR / "r" / "tximport_deseq2.log"
-    params:
-        figdir=DE_FIG_DIR,
-        quant_dir=SALMON_DIR,
-        se_flag="--se" if SEQUENCING_MODE == "single" else ""
+        LOG_DIR / "deseq2" / "deseq2.log"
     threads: config["threads"]
     resources:
         mem_mb=config["memory_gb"] * 1024
-    conda: "../../envs/r.yml"
+    conda:
+        "../../envs/rnaseq-analysis.yml"
     shell:
         """
-        mkdir -p {LOG_DIR / "r"}
-        scripts/tximport_deseq2.R \
-          --params config/params.yaml \
-          --sample-sheet {input.samples} \
-          --quant-dir {params.quant_dir} \
-          --tx2gene {input.tx2gene} \
-          --out-counts {output.counts} \
-          --out-tpm {output.tpm} \
-          --out-txi {output.txi} \
-          --out-dds {output.dds} \
-          --out-summary {output.summary} \
-          --contrast-file {input.contrasts} \
-          --figdir {params.figdir} \
-          {params.se_flag} > {log} 2>&1
+        python scripts/run_stage.py tximport \\
+            --salmon-dir {input.salmon_dir} \\
+            --tx2gene {input.tx2gene} \\
+            --samples {input.samples} \\
+            --contrasts {input.contrasts} \\
+            --outdir {DE_DIR} \\
+            --design "{config[r][design]}" \\
+            --contrast-variable "{config[r][contrast_variable]}" > {log} 2>&1
+        touch {output.counts_table} {output.tpm_table} {output.de_summary} {output.r_env}
         """
 
 
