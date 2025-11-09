@@ -3,10 +3,10 @@ uvicorn
 jinja2
 python-multipart
 aiofiles
-pandas
-dash
-dash-bootstrap-components
-plotly
+celery
+redis
+sqlalchemy
+pydantic
 
 
 
