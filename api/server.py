@@ -20,6 +20,9 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 from rnaseq_mini.logger import get_logger
 
+from sqlalchemy.orm import Session
+from . import db, tasks
+
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,6 +42,9 @@ except ImportError:
 
 # Set up logging
 log = get_logger("api")
+
+# Initialize DB
+db.init_db()
 
 
 class RNASEQMiniAPI:
@@ -74,8 +80,8 @@ class RNASEQMiniAPI:
         self.multiomics_integrator = None
         self.webhook_manager = None
 
-        # Analysis jobs tracking
-        self.analysis_jobs = {}
+        # Analysis jobs tracking (No longer used, replaced by DB)
+        # self.analysis_jobs = {}
 
         # Setup routes
         self._setup_routes()
@@ -114,61 +120,54 @@ class RNASEQMiniAPI:
 
         # Pipeline execution endpoints
         @self.app.post("/api/v1/pipeline/run")
-        async def run_pipeline(request: Dict[str, Any], background_tasks: BackgroundTasks):
+        async def run_pipeline(request: Dict[str, Any], db_session: Session = Depends(db.get_db)):
             """Run RNA-seq pipeline analysis."""
             job_id = str(uuid.uuid4())
             log.info("pipeline_run_requested", job_id=job_id, params=request)
 
-            # Store job information
-            self.analysis_jobs[job_id] = {
-                "id": job_id,
-                "status": "queued",
-                "created_at": datetime.now().isoformat(),
-                "parameters": request,
-                "results": None,
-                "error": None
-            }
+            # Create a new job record in the database
+            new_job = db.Job(
+                id=job_id,
+                status="queued",
+                parameters=json.dumps(request)
+            )
+            db_session.add(new_job)
+            db_session.commit()
+            db_session.refresh(new_job)
 
-            # Run pipeline in background
-            background_tasks.add_task(self._execute_pipeline_job, job_id, request)
+            # Dispatch the task to the Celery worker
+            tasks.execute_pipeline_task.delay(job_id)
 
             return {
                 "job_id": job_id,
                 "status": "queued",
-                "message": "Pipeline execution started"
+                "message": "Pipeline execution has been queued."
             }
 
         @self.app.get("/api/v1/pipeline/jobs/{job_id}")
-        async def get_job_status(job_id: str):
+        async def get_job_status(job_id: str, db_session: Session = Depends(db.get_db)):
             """Get status of a pipeline job."""
-            if job_id not in self.analysis_jobs:
+            job = db_session.query(db.Job).filter(db.Job.id == job_id).first()
+            if not job:
                 log.warn("job_not_found", job_id=job_id)
                 raise HTTPException(status_code=404, detail="Job not found")
-
-            return self.analysis_jobs[job_id]
+            return job
 
         @self.app.get("/api/v1/pipeline/jobs")
-        async def list_jobs(limit: int = 50, offset: int = 0):
+        async def list_jobs(limit: int = 50, offset: int = 0, db_session: Session = Depends(db.get_db)):
             """List recent pipeline jobs."""
-            jobs = list(self.analysis_jobs.values())
-            jobs.sort(key=lambda x: x["created_at"], reverse=True)
-
-            return {
-                "jobs": jobs[offset:offset+limit],
-                "total": len(jobs),
-                "limit": limit,
-                "offset": offset
-            }
+            jobs = db_session.query(db.Job).order_by(db.Job.created_at.desc()).offset(offset).limit(limit).all()
+            total = db_session.query(db.Job).count()
+            return {"jobs": jobs, "total": total, "limit": limit, "offset": offset}
 
         @self.app.get("/api/v1/pipeline/jobs/{job_id}/log", response_class=FileResponse)
-        async def get_job_log(job_id: str):
+        async def get_job_log(job_id: str, db_session: Session = Depends(db.get_db)):
             """Get the log file for a specific pipeline job."""
-            if job_id not in self.analysis_jobs:
+            job = db_session.query(db.Job).filter(db.Job.id == job_id).first()
+            if not job:
                 raise HTTPException(status_code=404, detail="Job not found")
             
-            job = self.analysis_jobs[job_id]
-            log_file = job.get("log_file")
-
+            log_file = job.log_file
             if not log_file or not Path(log_file).exists():
                 raise HTTPException(status_code=404, detail="Log file not found for this job.")
 
@@ -280,7 +279,7 @@ class RNASEQMiniAPI:
 
         # Cache management endpoints
         @self.app.get("/api/v1/cache/stats")
-        async def cache_stats():
+        async def cache_stats(db_session: Session = Depends(db.get_db)):
             """Get cache statistics."""
             try:
                 if not self.cache_manager:
@@ -294,7 +293,7 @@ class RNASEQMiniAPI:
                 raise HTTPException(status_code=500, detail=str(e))
 
         @self.app.post("/api/v1/cache/cleanup")
-        async def cleanup_cache(request: Dict[str, Any]):
+        async def cleanup_cache(request: Dict[str, Any], db_session: Session = Depends(db.get_db)):
             """Clean up cache entries."""
             try:
                 max_age_days = request.get("max_age_days", 30)
@@ -363,7 +362,7 @@ class RNASEQMiniAPI:
 
         # Plugin endpoints
         @self.app.get("/api/v1/plugins")
-        async def list_plugins():
+        async def list_plugins(db_session: Session = Depends(db.get_db)):
             """List available plugins."""
             try:
                 if not hasattr(self, 'plugin_manager'):
@@ -398,80 +397,81 @@ class RNASEQMiniAPI:
                 log.error("error_executing_plugin", plugin_name=plugin_name, error=str(e), traceback=traceback.format_exc())
                 raise HTTPException(status_code=500, detail=str(e))
 
-    def _execute_pipeline_job(self, job_id: str, parameters: Dict[str, Any]):
-        """Execute pipeline job in background."""
-        try:
-            log.info("pipeline_job_started", job_id=job_id)
+    # This method is no longer used and is replaced by the Celery task in tasks.py
+    # def _execute_pipeline_job(self, job_id: str, parameters: Dict[str, Any]):
+    #     """Execute pipeline job in background."""
+    #     try:
+    #         log.info("pipeline_job_started", job_id=job_id)
 
-            # Update job status
-            self.analysis_jobs[job_id]["status"] = "running"
-            self.analysis_jobs[job_id]["started_at"] = datetime.now().isoformat()
+    #         # Update job status
+    #         self.analysis_jobs[job_id]["status"] = "running"
+    #         self.analysis_jobs[job_id]["started_at"] = datetime.now().isoformat()
 
-            # Create a dedicated results directory for this job
-            results_dir = Path("results") / f"job_{job_id}"
-            results_dir.mkdir(parents=True, exist_ok=True)
-            self.analysis_jobs[job_id]["results_dir"] = str(results_dir)
+    #         # Create a dedicated results directory for this job
+    #         results_dir = Path("results") / f"job_{job_id}"
+    #         results_dir.mkdir(parents=True, exist_ok=True)
+    #         self.analysis_jobs[job_id]["results_dir"] = str(results_dir)
 
-            # Create a temporary params file for the run
-            params_file = results_dir / "params.yaml"
-            with open("config/params.yaml") as f:
-                run_config = yaml.safe_load(f)
+    #         # Create a temporary params file for the run
+    #         params_file = results_dir / "params.yaml"
+    #         with open("config/params.yaml") as f:
+    #             run_config = yaml.safe_load(f)
 
-            # Override params with API request, but enforce the new results_dir
-            run_config.update(parameters.get("config", {}))
-            run_config["results_dir"] = str(results_dir)
+    #         # Override params with API request, but enforce the new results_dir
+    #         run_config.update(parameters.get("config", {}))
+    #         run_config["results_dir"] = str(results_dir)
             
-            with open(params_file, 'w') as f:
-                yaml.dump(run_config, f)
+    #         with open(params_file, 'w') as f:
+    #             yaml.dump(run_config, f)
 
-            engine = run_config.get("engine", "snakemake")
-            log_file = results_dir / "pipeline.log"
-            self.analysis_jobs[job_id]["log_file"] = str(log_file)
+    #         engine = run_config.get("engine", "snakemake")
+    #         log_file = results_dir / "pipeline.log"
+    #         self.analysis_jobs[job_id]["log_file"] = str(log_file)
 
-            cmd = []
-            if engine == "snakemake":
-                cmd = [
-                    "snakemake",
-                    "-s", "pipeline/snakemake/Snakefile",
-                    "--configfile", str(params_file),
-                    "--use-conda",
-                    "--cores", str(run_config.get("threads", 2)),
-                ]
-            elif engine == "nextflow":
-                cmd = [
-                    "nextflow", "run", "pipeline/nextflow/main.nf",
-                    "-params-file", str(params_file),
-                    "-with-conda",
-                    "-profile", "local",
-                    "--results_dir", str(results_dir),
-                ]
+    #         cmd = []
+    #         if engine == "snakemake":
+    #             cmd = [
+    #                 "snakemake",
+    #                 "-s", "pipeline/snakemake/Snakefile",
+    #                 "--configfile", str(params_file),
+    #                 "--use-conda",
+    #                 "--cores", str(run_config.get("threads", 2)),
+    #             ]
+    #         elif engine == "nextflow":
+    #             cmd = [
+    #                 "nextflow", "run", "pipeline/nextflow/main.nf",
+    #                 "-params-file", str(params_file),
+    #                 "-with-conda",
+    #                 "-profile", "local",
+    #                 "--results_dir", str(results_dir),
+    #             ]
 
-            with open(log_file, "w") as log:
-                process = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
+    #         with open(log_file, "w") as log:
+    #             process = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT)
 
-            self.analysis_jobs[job_id]["process_pid"] = process.pid
-            process.wait() # Wait for the process to complete
+    #         self.analysis_jobs[job_id]["process_pid"] = process.pid
+    #         process.wait() # Wait for the process to complete
 
-            if process.returncode == 0:
-                # Update job with results
-                self.analysis_jobs[job_id]["status"] = "completed"
-                self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
-                # Trigger completion webhook if configured
-                asyncio.run(self._trigger_completion_webhook(job_id, {"results_dir": str(results_dir)}))
-                log.info("pipeline_job_completed", job_id=job_id, results_dir=str(results_dir))
-            else:
-                raise RuntimeError(f"Pipeline exited with non-zero status: {process.returncode}")
+    #         if process.returncode == 0:
+    #             # Update job with results
+    #             self.analysis_jobs[job_id]["status"] = "completed"
+    #             self.analysis_jobs[job_id]["completed_at"] = datetime.now().isoformat()
+    #             # Trigger completion webhook if configured
+    #             asyncio.run(self._trigger_completion_webhook(job_id, {"results_dir": str(results_dir)}))
+    #             log.info("pipeline_job_completed", job_id=job_id, results_dir=str(results_dir))
+    #         else:
+    #             raise RuntimeError(f"Pipeline exited with non-zero status: {process.returncode}")
 
-        except Exception as e:
-            error_message = f"{e}\n\n{traceback.format_exc()}"
-            log.error("pipeline_job_failed", job_id=job_id, error=str(e), traceback=traceback.format_exc())
-            # Update job with error
-            self.analysis_jobs[job_id]["status"] = "failed"
-            self.analysis_jobs[job_id]["error"] = error_message
-            self.analysis_jobs[job_id]["failed_at"] = datetime.now().isoformat()
+    #     except Exception as e:
+    #         error_message = f"{e}\n\n{traceback.format_exc()}"
+    #         log.error("pipeline_job_failed", job_id=job_id, error=str(e), traceback=traceback.format_exc())
+    #         # Update job with error
+    #         self.analysis_jobs[job_id]["status"] = "failed"
+    #         self.analysis_jobs[job_id]["error"] = error_message
+    #         self.analysis_jobs[job_id]["failed_at"] = datetime.now().isoformat()
 
-            # Trigger error webhook if configured
-            asyncio.run(self._trigger_error_webhook(job_id, error_message))
+    #         # Trigger error webhook if configured
+    #         asyncio.run(self._trigger_error_webhook(job_id, error_message))
 
     async def _trigger_completion_webhook(self, job_id: str, results: Dict):
         """Trigger webhook for job completion."""
