@@ -27,7 +27,9 @@ if SINGLECELL_ENABLED:
             adata=SINGLECELL_OUTPUT_DIR / "processed_data.h5ad",
             umap_plot=SINGLECELL_OUTPUT_DIR / "umap_clusters.png",
             marker_genes=SINGLECELL_OUTPUT_DIR / "marker_genes_top20.tsv",
-            qc_plot=SINGLECELL_OUTPUT_DIR / "qc_violin_before_filtering.png"
+            qc_plot=SINGLECELL_OUTPUT_DIR / "qc_violin_before_filtering.png",
+            # Add new optional output for the annotation plot
+            annotated_umap=SINGLECELL_OUTPUT_DIR / "umap_cell_types.png" if config["singlecell"]["annotation"]["enabled"] else []
         params:
             input_dir=str(SINGLECELL_INPUT_DIR),
             output_dir=str(SINGLECELL_OUTPUT_DIR),
@@ -36,7 +38,9 @@ if SINGLECELL_ENABLED:
             max_mito=config["singlecell"]["analysis"]["max_mito_percent"],
             n_pcs=config["singlecell"]["analysis"]["n_pcs"],
             n_neighbors=config["singlecell"]["analysis"]["n_neighbors"],
-            resolution=config["singlecell"]["analysis"]["clustering_resolution"]
+            resolution=config["singlecell"]["analysis"]["clustering_resolution"],
+            run_annotation="--run_annotation" if config["singlecell"]["annotation"]["enabled"] else "",
+            annotation_model=config["singlecell"]["annotation"]["model"]
         log:
             SINGLECELL_OUTPUT_DIR / "scanpy_analysis.log"
         conda:
@@ -52,7 +56,9 @@ if SINGLECELL_ENABLED:
                 --max_mito_percent {params.max_mito} \\
                 --n_pcs {params.n_pcs} \\
                 --n_neighbors {params.n_neighbors} \\
-                --resolution {params.resolution} > {log} 2>&1
+                --resolution {params.resolution} \\
+                {params.run_annotation} \\
+                --annotation_model {params.annotation_model} > {log} 2>&1
             """
 
 # Single-cell analysis completion marker
