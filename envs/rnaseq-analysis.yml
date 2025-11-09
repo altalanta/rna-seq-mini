@@ -28,6 +28,15 @@ dependencies:
   - r-quarto
   - pandoc
 
+  # Single-cell dependencies
+  - scanpy
+  - python-leiden
+  - celltypist
+
+  # Pip dependencies
+  - pip:
+    - snakemake-executor-plugin-slurm
+
   # Single-cell analysis tools
   - python>=3.8
   - pip

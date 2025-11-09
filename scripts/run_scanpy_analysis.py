@@ -11,9 +11,34 @@ import anndata as ad
 import matplotlib.pyplot as plt
 import pandas as pd
 import scanpy as sc
+import celltypist
 
 # Set up logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+def run_annotation(adata: ad.AnnData, model_name: str, output_dir: Path):
+    """
+    Performs automated cell type annotation using CellTypist.
+    """
+    logging.info(f"Performing cell type annotation with model: {model_name}")
+    try:
+        # Download the model if it's not already cached
+        model_path = celltypist.models.get(model=model_name)
+        
+        # Predict cell types
+        predictions = celltypist.annotate(adata, model=model_path, majority_voting=True)
+        adata.obs['predicted_labels'] = predictions.predicted_labels['majority_voting']
+
+        # Visualization
+        fig, ax = plt.subplots(figsize=(10, 10))
+        sc.pl.umap(adata, color="predicted_labels", ax=ax, show=False, legend_loc="on data")
+        plt.tight_layout()
+        plt.savefig(output_dir / "umap_cell_types.png")
+
+        logging.info("Cell type annotation finished successfully.")
+        
+    except Exception as e:
+        logging.error(f"CellTypist annotation failed: {e}")
 
 def run_analysis(
     input_dir: Path,
@@ -24,6 +49,8 @@ def run_analysis(
     n_pcs: int,
     n_neighbors: int,
     resolution: float,
+    run_celltypist: bool,
+    celltypist_model: str,
 ):
     """Run the complete Scanpy analysis workflow."""
     logging.info(f"Starting analysis for data in {input_dir}")
@@ -74,7 +101,11 @@ def run_analysis(
     plt.tight_layout()
     plt.savefig(output_dir / "umap_clusters.png")
 
-    # 8. Save final object
+    # 8. Automated Annotation (optional)
+    if run_celltypist:
+        run_annotation(adata, celltypist_model, output_dir)
+
+    # 9. Save final object
     adata.write(output_dir / "processed_data.h5ad")
     logging.info(f"Analysis complete. Results saved to {output_dir}")
 
@@ -88,6 +119,8 @@ def main():
     parser.add_argument("--n_pcs", type=int, default=30, help="Number of principal components to use.")
     parser.add_argument("--n_neighbors", type=int, default=15, help="Number of neighbors for the graph.")
     parser.add_argument("--resolution", type=float, default=0.5, help="Resolution for Leiden clustering.")
+    parser.add_argument("--run_annotation", action="store_true", help="If set, run CellTypist annotation.")
+    parser.add_argument("--annotation_model", type=str, default="Immune_All_Low.pkl", help="Name of the CellTypist model to use.")
     args = parser.parse_args()
 
     run_analysis(
@@ -99,9 +132,12 @@ def main():
         n_pcs=args.n_pcs,
         n_neighbors=args.n_neighbors,
         resolution=args.resolution,
+        run_celltypist=args.run_annotation,
+        celltypist_model=args.annotation_model,
     )
 
 if __name__ == "__main__":
     main()
+
 
 

@@ -70,6 +70,13 @@ singlecell:
     n_neighbors: 15
     clustering_resolution: 0.5
 
+  # Automated cell type annotation with CellTypist
+  annotation:
+    enabled: true
+    # Name of a pre-trained CellTypist model.
+    # A list of available models can be found at: https://celltypist.st-jude.org/models
+    model: "Immune_All_Low.pkl"
+
   # Output paths
   paths:
     output_dir: "results/singlecell/analysis"
