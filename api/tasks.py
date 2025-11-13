@@ -77,3 +77,5 @@ def execute_pipeline_task(self, job_id: str):
     finally:
         db.commit()
         db.close()
+
+
