@@ -2,13 +2,14 @@ rule fastqc:
     input:
         fastq=lambda wildcards: FASTQ_LOOKUP[wildcards.sample][wildcards.read]
     output:
-        html=lambda wildcards: QC_FASTQC_DIR / f"{wildcards.sample}_{wildcards.read}_fastqc.html",
-        zip=lambda wildcards: QC_FASTQC_DIR / f"{wildcards.sample}_{wildcards.read}_fastqc.zip"
+        # The output of the script runner is the directory. We just need to touch a sentinel file.
+        outdir=directory(QC_FASTQC_DIR),
+        html=lambda wildcards: QC_FASTQC_DIR / f"{wildcards.sample}_{wildcards.read}_fastqc.html"
     log:
         lambda wildcards: LOG_DIR / "fastqc" / f"{wildcards.sample}_{wildcards.read}.log"
-    threads: 2
+    threads: lambda wildcards: get_resources(wildcards, "fastqc", "threads")
     resources:
-        mem_mb=2000
+        mem_gb=lambda wildcards: get_resources(wildcards, "fastqc", "mem_gb")
     conda: "../../envs/rnaseq-core.yml"
     shell:
         """
