@@ -28,6 +28,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
 import uvicorn
+import pandas as pd
+from functools import lru_cache
 
 # Import pipeline components
 try:
@@ -46,6 +48,29 @@ log = get_logger("api")
 # Initialize DB
 db.init_db()
 
+# --- Data Loading & Caching ---
+
+@lru_cache(maxsize=16)
+def get_job_data(results_dir_str: str):
+    """Loads and caches all relevant data files for a given job results directory."""
+    log.info("loading_job_data", results_dir=results_dir_str)
+    results_dir = Path(results_dir_str)
+    
+    # Load TPM counts
+    try:
+        tpm_path = results_dir / "counts" / "tpm.tsv"
+        tpm_df = pd.read_csv(tpm_path, sep='	', index_col=0)
+    except FileNotFoundError:
+        tpm_df = pd.DataFrame()
+
+    # Load DE results for all contrasts
+    de_results = {}
+    de_files = list(results_dir.glob("de/DE_*.tsv"))
+    for f in de_files:
+        contrast = f.stem.replace("DE_", "")
+        de_results[contrast] = pd.read_csv(f, sep='	').rename(columns={'Unnamed: 0': 'gene'})
+
+    return {"tpm": tpm_df, "de": de_results}
 
 class RNASEQMiniAPI:
     """Main API server for RNASEQ-MINI platform."""
@@ -159,6 +184,42 @@ class RNASEQMiniAPI:
             jobs = db_session.query(db.Job).order_by(db.Job.created_at.desc()).offset(offset).limit(limit).all()
             total = db_session.query(db.Job).count()
             return {"jobs": jobs, "total": total, "limit": limit, "offset": offset}
+
+        @self.app.get("/api/v1/gene/{gene_id}")
+        async def get_gene_data(gene_id: str, job_id: str, db_session: Session = Depends(db.get_db)):
+            """
+            Get expression and DE stats for a specific gene across a job run.
+            """
+            job = db_session.query(db.Job).filter(db.Job.id == job_id).first()
+            if not job or not job.results_dir:
+                raise HTTPException(status_code=404, detail="Job or its results not found.")
+
+            data = get_job_data(job.results_dir)
+            tpm_df = data["tpm"]
+            de_results = data["de"]
+
+            gene_data = {
+                "gene_id": gene_id,
+                "expression": {},
+                "de_stats": []
+            }
+
+            # Get expression data
+            if not tpm_df.empty and gene_id in tpm_df.index:
+                gene_data["expression"] = tpm_df.loc[gene_id].to_dict()
+
+            # Get DE stats
+            for contrast, df in de_results.items():
+                gene_row = df[df["gene"] == gene_id]
+                if not gene_row.empty:
+                    stats = gene_row.iloc[0].to_dict()
+                    stats["contrast"] = contrast
+                    gene_data["de_stats"].append(stats)
+            
+            if not gene_data["expression"] and not gene_data["de_stats"]:
+                raise HTTPException(status_code=404, detail=f"Gene '{gene_id}' not found in results.")
+
+            return gene_data
 
         @self.app.get("/api/v1/pipeline/jobs/{job_id}/log", response_class=FileResponse)
         async def get_job_log(job_id: str, db_session: Session = Depends(db.get_db)):

@@ -1,6 +1,6 @@
 import dash
 from dash import dcc, html, dash_table
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 import plotly.express as px
 import pandas as pd
 import glob
@@ -8,6 +8,9 @@ from pathlib import Path
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 import numpy as np
+import json
+from api.server import get_job_data
+import yaml
 
 # --- Data Loading ---
 def load_multiqc_stats(results_dir):
@@ -32,30 +35,28 @@ def load_normalized_counts(results_dir):
 
 def load_de_results(results_dir):
     """Load differential expression results from a specified results directory."""
+    # This function is now superseded by get_job_data, but we keep it for structure
+    # The actual data loading for DE will happen inside the callbacks via get_job_data
     de_files = glob.glob(str(results_dir / "de" / "DE_*.tsv"))
-
     if not de_files:
-        return pd.DataFrame(), {}
+        return {}, {}
+    
+    contrasts = [Path(f).stem.replace("DE_", "") for f in de_files]
+    return {c: None for c in contrasts}, {} # Return dummy data
 
-    all_de = {}
-    for f in de_files:
-        contrast = Path(f).stem.replace("DE_", "")
-        df = pd.read_csv(f, sep='\t')
-        df.rename(columns={'Unnamed: 0': 'gene'}, inplace=True)
-        all_de[contrast] = df
+def load_samples_info(results_dir):
+    """Load sample metadata to map samples to conditions."""
+    try:
+        # A bit of a hack: find the params file used for the run to locate the samples file
+        params_file = results_dir / "params.yaml"
+        with open(params_file, 'r') as f:
+            config = yaml.safe_load(f)
+        samples_path = Path(config["paths"]["samples"])
+        df = pd.read_csv(samples_path, sep='	')
+        return df.set_index('sample')['condition'].to_dict()
+    except Exception:
+        return {}
 
-    # Create a summary of significant genes
-    summary = []
-    for contrast, df in all_de.items():
-        significant = df[df['padj'] < 0.05]
-        summary.append({
-            "contrast": contrast,
-            "upregulated": (significant['log2FoldChange'] > 0).sum(),
-            "downregulated": (significant['log2FoldChange'] < 0).sum()
-        })
-
-    summary_df = pd.DataFrame(summary)
-    return summary_df, all_de
 
 # --- App Initialization ---
 def create_dashboard(server, results_dir_path="results"):
@@ -64,8 +65,9 @@ def create_dashboard(server, results_dir_path="results"):
 
     summary_df, all_de_data = load_de_results(results_dir)
     multiqc_stats = load_multiqc_stats(results_dir)
-    tpm_counts = load_normalized_counts(results_dir)
+    # tpm_counts is now loaded on demand by get_job_data
     contrasts = list(all_de_data.keys())
+    samples_map = load_samples_info(results_dir)
 
     dash_app = dash.Dash(
         server=server,
@@ -138,6 +140,22 @@ def create_dashboard(server, results_dir_path="results"):
                     style_table={'overflowX': 'auto'}
                 )
             ]),
+            dbc.Tab(label="Gene View", children=[
+                dbc.Row([
+                    dbc.Col(dcc.Input(id='gene-input', type='text', placeholder='Enter Gene ID...', debounce=True), width=4),
+                    dbc.Col(html.Button('Search', id='gene-search-button', n_clicks=0), width=2),
+                ], className="mt-3"),
+                dbc.Row([
+                    dbc.Col(dcc.Graph(id='gene-expression-plot'), width=6),
+                    dbc.Col([
+                        html.H4("Differential Expression Stats"),
+                        dash_table.DataTable(
+                            id='gene-de-table',
+                            style_table={'overflowX': 'auto'}
+                        )
+                    ], width=6)
+                ], className="mt-4")
+            ]),
         ])
     ], fluid=True)
 
@@ -173,16 +191,21 @@ def create_dashboard(server, results_dir_path="results"):
         # Heatmap of top 20 significant genes
         sig_genes = df[(df['padj'] < 0.05) & (abs(df['log2FoldChange']) > 1)].sort_values('padj').head(20)
         if not sig_genes.empty and not tpm_counts.empty:
-            heatmap_data = tpm_counts.loc[sig_genes['gene']].dropna()
-            # Log transform and center the data for better visualization
-            heatmap_data = np.log2(heatmap_data + 1)
-            heatmap_data = heatmap_data.sub(heatmap_data.mean(axis=1), axis=0)
-            
-            heatmap_fig = px.imshow(
-                heatmap_data,
-                labels=dict(x="Sample", y="Gene", color="Log2(TPM)"),
-                title="Top 20 DE Genes"
-            )
+            # Check if gene names exist in the TPM index before trying to locate them
+            valid_genes = sig_genes['gene'][sig_genes['gene'].isin(tpm_counts.index)]
+            if not valid_genes.empty:
+                heatmap_data = tpm_counts.loc[valid_genes].dropna()
+                # Log transform and center the data for better visualization
+                heatmap_data = np.log2(heatmap_data + 1)
+                heatmap_data = heatmap_data.sub(heatmap_data.mean(axis=1), axis=0)
+                
+                heatmap_fig = px.imshow(
+                    heatmap_data,
+                    labels=dict(x="Sample", y="Gene", color="Log2(TPM)"),
+                    title="Top 20 DE Genes"
+                )
+            else:
+                heatmap_fig = go.Figure().update_layout(title="No significant genes to display in heatmap", xaxis_visible=False, yaxis_visible=False)
         else:
             heatmap_fig = go.Figure().update_layout(title="No significant genes to display in heatmap", xaxis_visible=False, yaxis_visible=False)
 
@@ -191,6 +214,50 @@ def create_dashboard(server, results_dir_path="results"):
         data = df.to_dict('records')
 
         return volcano_fig, columns, data, heatmap_fig
+
+    @dash_app.callback(
+        [Output('gene-expression-plot', 'figure'),
+         Output('gene-de-table', 'data'),
+         Output('gene-de-table', 'columns')],
+        [Input('gene-search-button', 'n_clicks')],
+        [State('gene-input', 'value')]
+    )
+    def update_gene_view(n_clicks, gene_id):
+        if not n_clicks or not gene_id:
+            empty_fig = go.Figure().update_layout(title="Enter a gene ID and click Search", xaxis_visible=False, yaxis_visible=False)
+            return empty_fig, [], []
+
+        job_data = get_job_data(str(results_dir))
+        tpm_df = job_data["tpm"]
+        de_data = job_data["de"]
+        
+        # Expression Plot
+        if not tpm_df.empty and gene_id in tpm_df.index:
+            expression_data = tpm_df.loc[gene_id]
+            exp_df = pd.DataFrame({'sample': expression_data.index, 'tpm': expression_data.values})
+            exp_df['condition'] = exp_df['sample'].map(samples_map)
+            
+            expression_fig = px.box(exp_df, x='condition', y='tpm', title=f"TPM Expression for {gene_id}", points="all")
+        else:
+            expression_fig = go.Figure().update_layout(title=f"Gene {gene_id} not found in TPM data", xaxis_visible=False, yaxis_visible=False)
+
+        # DE Stats Table
+        de_stats = []
+        for contrast, df in de_data.items():
+            gene_row = df[df['gene'] == gene_id]
+            if not gene_row.empty:
+                stats = gene_row.iloc[0].to_dict()
+                stats['contrast'] = contrast
+                de_stats.append(stats)
+        
+        de_columns = [
+            {"name": "Contrast", "id": "contrast"},
+            {"name": "log2FC", "id": "log2FoldChange"},
+            {"name": "p-value", "id": "pvalue"},
+            {"name": "adj p-value", "id": "padj"}
+        ]
+        
+        return expression_fig, de_stats, de_columns
 
     return dash_app
 

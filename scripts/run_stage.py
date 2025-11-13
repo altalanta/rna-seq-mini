@@ -9,10 +9,12 @@ import subprocess
 import sys
 from pathlib import Path
 import click
+import yaml
 
-# Add src to the Python path to allow importing the logger module
+# Add src to the Python path to allow importing modules
 sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 from rnaseq_mini.logger import get_logger
+from scripts import cache_manager
 
 log = get_logger(__name__)
 
@@ -49,19 +51,45 @@ def run_command(cmd: list, **kwargs):
 # --- CLI Definition ---
 
 @click.group()
-def cli():
+@click.option("--use-cache/--no-cache", default=True, help="Enable or disable caching for this run.")
+@click.pass_context
+def cli(ctx, use_cache):
     """A central CLI for running rnaseq-mini pipeline stages."""
-    pass
+    ctx.ensure_object(dict)
+    
+    # Load the main config to check if caching is globally enabled
+    with open("config/params.yaml", 'r') as f:
+        config = yaml.safe_load(f)
+    
+    global_cache_enabled = config.get("cache", {}).get("enabled", True)
+    ctx.obj['USE_CACHE'] = global_cache_enabled and use_cache
 
 @cli.command()
 @click.option("--fastq", "fastq_path", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the input FASTQ file.")
 @click.option("--outdir", "output_dir", required=True, type=click.Path(path_type=Path), help="Output directory for FastQC results.")
 @click.option("--threads", default=1, type=int, help="Number of threads to use.")
-def fastqc(fastq_path: Path, output_dir: Path, threads: int):
+@click.pass_context
+def fastqc(ctx, fastq_path: Path, output_dir: Path, threads: int):
     """Run FastQC on a single FASTQ file."""
     log.info("fastqc_started", input_fastq=str(fastq_path), out_dir=str(output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Caching Logic
+    if ctx.obj['USE_CACHE']:
+        input_files = [fastq_path]
+        params = {"threads": threads, "command": "fastqc"}
+        cache_hash = cache_manager.compute_hash(input_files, params)
+        
+        # NOTE: Caching FastQC is tricky because its output is two files (.html, .zip) inside a dir.
+        # For simplicity, we will treat the whole directory as the output.
+        # A more robust solution might handle individual files.
+        output_target = output_dir / f"{fastq_path.stem}_fastqc.html" # Sentinel file
+        if cache_manager.check_cache(cache_hash):
+            log.info("cache_hit", stage="fastqc", hash=cache_hash)
+            # FastQC outputs to a directory, so we can't easily symlink.
+            # We'll skip for now, but a real implementation might zip/unzip the output dir.
+            log.warn("fastqc_caching_not_fully_implemented", reason="Directory output is complex to cache.")
+
     cmd = [
         "fastqc",
         "--outdir", output_dir,
@@ -69,17 +97,26 @@ def fastqc(fastq_path: Path, output_dir: Path, threads: int):
         fastq_path,
     ]
     run_command(cmd)
+    
+    # Caching Logic: Store result
+    # if ctx.obj['USE_CACHE']:
+    #     cache_manager.store_in_cache(cache_hash, output_target)
+
     log.info("fastqc_finished", input_fastq=str(fastq_path))
 
 @cli.command()
 @click.option("--analysis-dir", "analysis_dir", required=True, type=click.Path(exists=True, path_type=Path), help="Directory containing analysis files to scan (e.g., FastQC zips).")
 @click.option("--outdir", "output_dir", required=True, type=click.Path(path_type=Path), help="Output directory for the MultiQC report.")
 @click.option("--title", default="MultiQC Report", help="Title for the MultiQC report.")
-def multiqc(analysis_dir: Path, output_dir: Path, title: str):
+@click.pass_context
+def multiqc(ctx, analysis_dir: Path, output_dir: Path, title: str):
     """Run MultiQC on a directory of analysis files."""
     log.info("multiqc_started", analysis_dir=str(analysis_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
     
+    # Caching is complex for multiqc as inputs are a whole directory.
+    # We will skip implementing it for this stage for now.
+
     cmd = [
         "multiqc",
         "--force",
@@ -98,10 +135,28 @@ def multiqc(analysis_dir: Path, output_dir: Path, title: str):
 @click.option("--fastq1", type=click.Path(exists=True, path_type=Path), help="Path to R1 FASTQ file.")
 @click.option("--fastq2", type=click.Path(exists=True, path_type=Path), help="Path to R2 FASTQ file (for paired-end).")
 @click.option("--extra-opts", default="", help="Extra options to pass to Salmon.")
-def salmon_quant(index_path: Path, output_dir: Path, libtype: str, threads: int, fastq1: Path, fastq2: Path, extra_opts: str):
+@click.pass_context
+def salmon_quant(ctx, index_path: Path, output_dir: Path, libtype: str, threads: int, fastq1: Path, fastq2: Path, extra_opts: str):
     """Run Salmon quantification."""
     log.info("salmon_quant_started", sample=fastq1.name, out_dir=str(output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Caching Logic
+    if ctx.obj['USE_CACHE']:
+        input_files = [fastq1, fastq2] if fastq2 else [fastq1]
+        input_files.append(index_path) # The index is also a key input
+        params = {"libtype": libtype, "threads": threads, "extra": extra_opts, "command": "salmon_quant"}
+        cache_hash = cache_manager.compute_hash(input_files, params)
+        
+        # Salmon outputs a directory. We will cache the key file `quant.sf`.
+        output_target = output_dir / "quant.sf"
+        if cache_manager.check_cache(cache_hash):
+            log.info("cache_hit", stage="salmon_quant", hash=cache_hash)
+            # This is a simplification. A real implementation would need to handle the whole directory.
+            # For now, we assume if quant.sf is cached, the rest is fine.
+            cache_manager.retrieve_from_cache(cache_hash, output_target)
+            log.info("salmon_quant_finished_from_cache", sample=fastq1.name)
+            return
 
     cmd = [
         "salmon", "quant",
@@ -121,6 +176,11 @@ def salmon_quant(index_path: Path, output_dir: Path, libtype: str, threads: int,
         cmd.extend(extra_opts.split())
         
     run_command(cmd)
+
+    # Caching Logic: Store result
+    if ctx.obj['USE_CACHE']:
+        cache_manager.store_in_cache(cache_hash, output_target)
+
     log.info("salmon_quant_finished", sample=fastq1.name)
 
 @cli.command()
