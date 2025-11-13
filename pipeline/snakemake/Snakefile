@@ -46,6 +46,47 @@ if organism not in genome_config:
     raise ValueError(f"Organism '{organism}' not found in config/genome.yaml")
 REFERENCE_CONFIG = genome_config[organism]
 
+# --- Dynamic Resource Allocation ---
+
+def get_resource_profile_for_sample(wildcards, rule_name: str) -> str:
+    """
+    Calls the estimation script to get the profile (small, medium, large) for a sample.
+    """
+    # For rules that run per sample, we can determine the profile from the FASTQ size
+    if hasattr(wildcards, "sample"):
+        # We need to find the FASTQ file for this sample. Use R1.
+        fastq_path = FASTQ_LOOKUP[wildcards.sample]["R1"]
+        
+        # Use a shell command to run our script and capture the output
+        try:
+            profile = subprocess.check_output(
+                ["python", "scripts/estimate_resources.py", fastq_path],
+                text=True
+            ).strip()
+            return profile
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            # Fallback to a default if the script fails or file doesn't exist (e.g., dry run)
+            return "small"
+    
+    # For rules that don't operate on a single sample (like deseq2), we might use a default or average
+    return "medium"
+
+def get_resources(wildcards, rule_name: str, resource_type: str):
+    """
+    Looks up the requested resource (threads or mem_gb) for a given rule and profile.
+    """
+    profile = get_resource_profile_for_sample(wildcards, rule_name)
+    
+    # Get the resource value from the config, falling back to the default
+    default_resources = config["resource_profiles"]["default"]
+    value = config["resource_profiles"].get(rule_name, {}).get(profile, {}).get(resource_type)
+    
+    if value:
+        return value
+    else:
+        # Fallback to default if the specific profile/rule is not defined
+        return default_resources[resource_type]
+
 
 # validate_config(config) # No longer needed, handled by script call above
 

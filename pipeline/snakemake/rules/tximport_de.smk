@@ -12,9 +12,9 @@ rule run_deseq2:
         de_tables=DE_TABLE_PATHS
     log:
         LOG_DIR / "deseq2" / "deseq2.log"
-    threads: config["threads"]
+    threads: lambda wildcards: get_resources(wildcards, "deseq2", "threads")
     resources:
-        mem_mb=config["memory_gb"] * 1024
+        mem_gb=lambda wildcards: get_resources(wildcards, "deseq2", "mem_gb")
     conda:
         "../../envs/rnaseq-analysis.yml"
     shell:

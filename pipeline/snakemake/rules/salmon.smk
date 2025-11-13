@@ -118,13 +118,14 @@ rule salmon_quant:
         index=rules.salmon_index.output.index
     output:
         quant=SALMON_DIR / "{sample}" / "quant.sf",
-        libjson=SALMON_DIR / "{sample}" / "lib_format_counts.json"
+        libjson=SALMON_DIR / "{sample}" / "lib_format_counts.json",
+        outdir=directory(SALMON_DIR / "{sample}")
     log:
         lambda wildcards: LOG_DIR / "salmon" / f"{wildcards.sample}.log"
-    threads: config["salmon"]["threads"]
+    threads: lambda wildcards: get_resources(wildcards, "salmon_quant", "threads")
     resources:
-        mem_mb=config["memory_gb"] * 1024
-    conda: "../../envs/salmon.yml"
+        mem_gb=lambda wildcards: get_resources(wildcards, "salmon_quant", "mem_gb")
+    conda: "../../envs/rnaseq-analysis.yml"
     run:
         # Check cache before running
         if cache_manager and CACHE_ENABLED:
