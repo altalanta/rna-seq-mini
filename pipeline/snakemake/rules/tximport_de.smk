@@ -56,3 +56,43 @@ rule fgsea:
           --outdir {FGSEA_DIR} \
           --figdir {params.figdir} > {log} 2>&1
         """
+
+rule run_fgsea:
+    input:
+        de_file=DE_DIR / "DE_{contrast}.tsv",
+        geneset_file=config["paths"]["genesets"]
+    output:
+        results_table=FGSEA_DIR / "{contrast}" / "fgsea_results.tsv",
+        plot_table=FGSEA_DIR / "{contrast}" / "top_pathways_table.pdf",
+        plot_enrichment=FGSEA_DIR / "{contrast}" / "top_enrichment_plot.pdf"
+    params:
+        outdir=lambda wildcards: FGSEA_DIR / wildcards.contrast
+    log:
+        LOG_DIR / "fgsea" / "{contrast}.log"
+    threads: 1
+    resources:
+        mem_gb=4
+    conda:
+        "../../envs/rnaseq-analysis.yml"
+    run:
+        run_command(f"""
+            python scripts/run_stage.py pathway_analysis \\
+                --deseq2-file {input.de_file} \\
+                --geneset-file {input.geneset_file} \\
+                --outdir {params.outdir}
+        """)
+
+# --- Aggregation Rule ---
+rule all_de:
+    input:
+        de_tables=DE_TABLE_PATHS
+    output:
+        de_summary=DE_DIR / "de_summary.tsv"
+    log:
+        LOG_DIR / "de_summary.log"
+    run:
+        run_command(f"""
+            python scripts/run_stage.py aggregate_de \\
+                --de-dir {DE_DIR} \\
+                --outdir {DE_DIR}
+        """)

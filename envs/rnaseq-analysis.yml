@@ -14,6 +14,7 @@ dependencies:
   - r-ggplot2
   - r-pheatmap
   - r-patchwork
+  - r-argparse
   - bioconductor-deseq2
   - bioconductor-tximport
   - bioconductor-tximportdata

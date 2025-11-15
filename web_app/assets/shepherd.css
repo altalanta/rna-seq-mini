@@ -1,0 +1,167 @@
+.shepherd-element,
+.shepherd-element *,
+.shepherd-element ::before,
+.shepherd-element ::after {
+  box-sizing: border-box;
+}
+.shepherd-element {
+  background: #fff;
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  max-width: 400px;
+  opacity: 0;
+  outline: none;
+  transition: opacity 0.3s, visibility 0.3s;
+  visibility: hidden;
+  width: 100%;
+  z-index: 9999;
+}
+.shepherd-element.shepherd-enabled {
+  opacity: 1;
+  visibility: visible;
+}
+.shepherd-element[data-popper-reference-hidden]:not(.shepherd-centered) {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+.shepherd-element,
+.shepherd-element.shepherd-centered {
+  left: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+.shepherd-element .shepherd-content {
+  border-radius: 5px;
+  padding: 0;
+  position: relative;
+}
+.shepherd-element .shepherd-header {
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  border-radius: 5px 5px 0 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75em;
+}
+.shepherd-element .shepherd-header .shepherd-title {
+  color: rgba(0, 0, 0, 0.75);
+  display: flex;
+  font-size: 0.8em;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+}
+.shepherd-element .shepherd-header .shepherd-cancel-icon {
+  background: transparent;
+  border: none;
+  color: hsla(0, 0%, 50.2%, 0.75);
+  cursor: pointer;
+  font-size: 1.25em;
+  font-weight: 400;
+  margin: 0;
+  padding: 0;
+  transition: color 0.5s ease;
+}
+.shepherd-element .shepherd-header .shepherd-cancel-icon:hover {
+  color: rgba(0, 0, 0, 0.75);
+}
+.shepherd-element .shepherd-text {
+  color: rgba(0, 0, 0, 0.75);
+  font-size: 0.9em;
+  line-height: 1.25em;
+  padding: 0.75em;
+}
+.shepherd-element .shepherd-text p {
+  margin: 0 0 0.5em;
+}
+.shepherd-element .shepherd-text p:last-child {
+  margin-bottom: 0;
+}
+.shepherd-element .shepherd-footer {
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 0.75em 0.75em;
+}
+.shepherd-element .shepherd-footer .shepherd-button {
+  background: #3288e6;
+  border: 0;
+  border-radius: 3px;
+  color: hsla(0, 0%, 100%, 0.75);
+  cursor: pointer;
+  margin-right: 0.5em;
+  padding: 0.5em 1.5em;
+  transition: all 0.5s ease;
+}
+.shepherd-element .shepherd-footer .shepherd-button:not(:disabled):hover {
+  background: #196fcc;
+  color: #fff;
+}
+.shepherd-element .shepherd-footer .shepherd-button.shepherd-button-secondary {
+  background: #f1f2f3;
+  color: rgba(0, 0, 0, 0.75);
+}
+.shepherd-element
+  .shepherd-footer
+  .shepherd-button.shepherd-button-secondary:not(:disabled):hover {
+  background: #d6d9dc;
+  color: rgba(0, 0, 0, 0.75);
+}
+.shepherd-element .shepherd-footer .shepherd-button:last-child {
+  margin-right: 0;
+}
+.shepherd-element .shepherd-footer .shepherd-button:disabled {
+  cursor: not-allowed;
+}
+.shepherd-element .shepherd-arrow,
+.shepherd-element .shepherd-arrow::before {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: inherit;
+}
+.shepherd-element .shepherd-arrow {
+  visibility: hidden;
+}
+.shepherd-element .shepherd-arrow::before {
+  content: "";
+  visibility: visible;
+  transform: rotate(45deg);
+}
+.shepherd-element[data-popper-placement^="top"] > .shepherd-arrow {
+  bottom: -8px;
+}
+.shepherd-element[data-popper-placement^="bottom"] > .shepherd-arrow {
+  top: -8px;
+}
+.shepherd-element[data-popper-placement^="left"] > .shepherd-arrow {
+  right: -8px;
+}
+.shepherd-element[data-popper-placement^="right"] > .shepherd-arrow {
+  left: -8px;
+}
+.shepherd-target-click-disabled.shepherd-enabled.shepherd-target {
+  pointer-events: none;
+}
+.shepherd-modal-overlay {
+  height: 100vh;
+  left: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  transition: opacity 0.3s;
+  width: 100vw;
+  z-index: 9998;
+}
+.shepherd-modal-is-open .shepherd-modal-overlay {
+  opacity: 0.5;
+  pointer-events: all;
+}
+.shepherd-target {
+  z-index: 9999;
+}

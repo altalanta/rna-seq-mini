@@ -1,61 +1,60 @@
 process TXIMPORT_DESEQ2 {
     tag "tximport_deseq2"
-    conda "${projectDir}/envs/r.yml"
-    publishDir "${params.paths.outdir}", mode: 'copy', overwrite: true
-    cpus params.threads ?: 4
+    conda "${projectDir}/envs/rnaseq-analysis.yml"
+    container "${params.container}"
+    publishDir "${params.paths.de}", mode: 'copy', overwrite: true
+    cpus { get_resources(null, 'deseq2', 'threads') }
+    memory { get_resources(null, 'deseq2', 'mem_gb').GB }
 
     input:
-        val trigger
-        path sample_sheet
-        path contrasts
-        path tx2gene
+    path(salmon_results)
+    path(tx2gene)
+    path(samples)
+    path(contrasts)
 
     output:
-        path "results/counts", emit: counts_dir
-        path "results/de", emit: de_dir
+    path "DE_*"
+    path "de_summary.tsv"
+    path "counts.tsv"
+    path "tpm.tsv"
+    path "deseq2_session_info.txt"
 
     script:
-        """
-        set -euo pipefail
-        mkdir -p results/counts results/de
-        ${projectDir}/scripts/tximport_deseq2.R \
-          --params ${projectDir}/config/params.yaml \
-          --sample-sheet ${sample_sheet} \
-          --quant-dir ${params.paths.salmon} \
-          --tx2gene ${tx2gene} \
-          --out-counts results/counts/counts.tsv \
-          --out-tpm results/counts/tpm.tsv \
-          --out-txi results/counts/txi.rds \
-          --out-dds results/de/dds.rds \
-          --out-summary results/de/de_summary.tsv \
-          --contrast-file ${contrasts} \
-          --figdir results/de/figures ${params.se ? '--se' : ''}
-        """
+    """
+    python ${projectDir}/scripts/run_stage.py tximport \\
+        --salmon-dir ${salmon_results} \\
+        --tx2gene ${tx2gene} \\
+        --samples ${samples} \\
+        --contrasts ${contrasts} \\
+        --outdir . \\
+        --design "${params.r.design}" \\
+        --contrast-variable "${params.r.contrast_variable}"
+    
+    # Touch the other expected output files that the R script creates inside the output dir
+    touch counts.tsv tpm.tsv de_summary.tsv deseq2_session_info.txt
+    """
 }
 
 process FGSEA {
-    tag "fgsea"
-    conda "${projectDir}/envs/r.yml"
-    publishDir "${params.paths.outdir}", mode: 'copy', overwrite: true
-    cpus 2
+    tag "fgsea_${contrast}"
+    conda "${projectDir}/envs/rnaseq-analysis.yml"
+    container "${params.container}"
+    publishDir "${params.paths.fgsea}/${contrast}", mode: 'copy', overwrite: true
+    cpus 1
+    memory '4.GB'
 
     input:
-        path de_dir
-        path contrast_file
+    tuple val(contrast), path(de_file)
+    path(geneset_file)
 
     output:
-        path "results/fgsea", emit: fgsea_dir
+    path "*"
 
     script:
-        """
-        set -euo pipefail
-        mkdir -p results
-        cp -r ${de_dir} results/
-        ${projectDir}/scripts/fgsea_pathways.R \
-          --params ${projectDir}/config/params.yaml \
-          --de-dir results/de \
-          --contrast-file ${contrast_file} \
-          --outdir results/fgsea \
-          --figdir results/fgsea/figures
-        """
+    """
+    python ${projectDir}/scripts/run_stage.py pathway_analysis \\
+        --deseq2-file ${de_file} \\
+        --geneset-file ${geneset_file} \\
+        --outdir .
+    """
 }
