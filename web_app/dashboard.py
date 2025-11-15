@@ -57,6 +57,14 @@ def load_samples_info(results_dir):
     except Exception:
         return {}
 
+def load_gsea_results(results_dir, contrast):
+    """Load GSEA results for a specific contrast."""
+    try:
+        gsea_file = results_dir / "fgsea" / contrast / "fgsea_results.tsv"
+        df = pd.read_csv(gsea_file, sep='	')
+        return df
+    except FileNotFoundError:
+        return pd.DataFrame()
 
 # --- App Initialization ---
 def create_dashboard(server, results_dir_path="results"):
@@ -92,17 +100,18 @@ def create_dashboard(server, results_dir_path="results"):
     total_genes = len(tpm_counts) if not tpm_counts.empty else 0
     num_contrasts = len(contrasts)
 
-    dash_app.layout = dbc.Container([
-        dbc.Row(dbc.Col(html.H1("Interactive Analysis Dashboard"), width=12, className="mb-4")),
-
-        # Summary Cards
+    dash_app.layout = dbc.Container(fluid=True, children=[
+        # Header
         dbc.Row([
-            dbc.Col(make_summary_card("Total Reads", f"{total_reads/1e6:.1f}M", "fa-book-open"), md=4),
-            dbc.Col(make_summary_card("Total Genes", f"{total_genes:,}", "fa-dna"), md=4),
-            dbc.Col(make_summary_card("Contrasts", num_contrasts, "fa-balance-scale"), md=4),
-        ]),
+            dbc.Col(html.H1("RNA-seq Analysis Dashboard", className="text-white"), width=10),
+            dbc.Col(
+                dbc.Button("Start Tour", id="start-tour-button", color="info", className="mt-2"),
+                width=2,
+                className="text-end"
+            )
+        ], className="bg-primary p-3 align-items-center"),
 
-        # Main Tabs
+        # Main content
         dbc.Tabs([
             dbc.Tab(label="Differential Expression", children=[
                 dbc.Row([
@@ -127,6 +136,28 @@ def create_dashboard(server, results_dir_path="results"):
                             columns=[], data=[], sort_action="native", filter_action="native", page_action="native", page_size=15,
                             style_table={'overflowX': 'auto'}
                         )
+                    ], width=12, className="mt-4")
+                ])
+            ]),
+            dbc.Tab(label="Pathway Analysis", children=[
+                dbc.Row([
+                    dbc.Col([
+                        html.H4("GSEA Results"),
+                        dash_table.DataTable(
+                            id='gsea-table',
+                            sort_action="native",
+                            filter_action="native",
+                            page_action="native",
+                            page_size=15,
+                            style_table={'overflowX': 'auto'},
+                            style_cell={'textAlign': 'left', 'minWidth': '120px'},
+                        )
+                    ], width=12, className="mt-3")
+                ]),
+                dbc.Row([
+                    dbc.Col([
+                        html.H4("Top Pathways Plot"),
+                        html.Img(id='gsea-plot-table', style={'width': '100%'})
                     ], width=12, className="mt-4")
                 ])
             ]),
@@ -259,6 +290,34 @@ def create_dashboard(server, results_dir_path="results"):
         
         return expression_fig, de_stats, de_columns
 
-    return dash_app
+    @dash_app.callback(
+        [Output('gsea-table', 'columns'),
+         Output('gsea-table', 'data'),
+         Output('gsea-plot-table', 'src')],
+        [Input('contrast-dropdown', 'value')]
+    )
+    def update_gsea_view(selected_contrast):
+        if not selected_contrast:
+            return [], [], ""
+
+        gsea_df = load_gsea_results(results_dir, selected_contrast)
+        
+        if gsea_df.empty:
+            return [], [], ""
+
+        # Prepare table data
+        gsea_df['leadingEdge'] = gsea_df['leadingEdge'].apply(lambda x: ', '.join(x.split(' ')))
+        columns = [{"name": i, "id": i} for i in gsea_df.columns]
+        data = gsea_df.to_dict('records')
+
+        # Prepare plot path
+        plot_path = results_dir / "fgsea" / selected_contrast / "top_pathways_table.pdf"
+        # Dash can't serve PDFs directly, so for now we will return an empty string.
+        # A more advanced implementation could convert the PDF to a PNG.
+        plot_src = "" # Placeholder
+
+        return columns, data, plot_src
+
+    return dash_app.server
 
 

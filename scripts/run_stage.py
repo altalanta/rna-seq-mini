@@ -183,6 +183,32 @@ def salmon_quant(ctx, index_path: Path, output_dir: Path, libtype: str, threads:
 
     log.info("salmon_quant_finished", sample=fastq1.name)
 
+
+@cli.command()
+@click.option("--deseq2-file", "deseq2_file", required=True, type=click.Path(exists=True, path_type=Path), help="Path to DESeq2 result file.")
+@click.option("--geneset-file", "geneset_file", required=True, type=click.Path(exists=True, path_type=Path), help="Path to gene set file (.gmt).")
+@click.option("--outdir", "output_dir", required=True, type=click.Path(path_type=Path), help="Output directory for GSEA results.")
+@click.pass_context
+def pathway_analysis(ctx, deseq2_file: Path, geneset_file: Path, output_dir: Path):
+    """Run Gene Set Enrichment Analysis (GSEA) using fgsea."""
+    log.info("gsea_started", contrast=deseq2_file.stem)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    # Caching for GSEA is complex due to multiple outputs and plot generation.
+    # We will skip implementing it for this stage for now.
+
+    cmd = [
+        "Rscript",
+        str(Path(__file__).parent / "run_fgsea.R"),
+        "--deseq2_file", deseq2_file,
+        "--geneset_file", geneset_file,
+        "--outdir", output_dir,
+    ]
+    run_command(cmd)
+
+    log.info("gsea_finished", contrast=deseq2_file.stem)
+
+
 @cli.command()
 @click.option("--salmon-dir", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the root directory of Salmon outputs.")
 @click.option("--tx2gene", required=True, type=click.Path(exists=True, path_type=Path), help="Path to the transcript-to-gene mapping file.")
