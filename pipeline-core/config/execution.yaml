@@ -1,0 +1,39 @@
+# Execution environment settings
+threads: 4
+memory_gb: 32
+
+containers:
+  enabled: true
+  image: "docker://rnaseq-mini:latest"
+
+profiles:
+  snakemake: "config/profiles/local.smk.yaml"
+
+# --- Dynamic Resource Allocation ---
+resource_profiles:
+  # Default resources for jobs if not otherwise specified
+  default: &default_resources
+    threads: 2
+    mem_gb: 4
+
+  # Resources for specific rules/processes
+  fastqc:
+    small: { threads: 1, mem_gb: 2 }
+    medium: { threads: 2, mem_gb: 4 }
+    large: { threads: 4, mem_gb: 8 }
+  
+  salmon_quant:
+    small: { threads: 2, mem_gb: 8 }
+    medium: { threads: 4, mem_gb: 16 }
+    large: { threads: 8, mem_gb: 32 }
+
+  deseq2:
+    small: { threads: 2, mem_gb: 8 }
+    medium: { threads: 4, mem_gb: 16 }
+    large: { threads: 8, mem_gb: 32 }
+
+  # Thresholds (in bytes) for determining which profile to use based on FASTQ file size
+  size_thresholds:
+    small: 100000000   # 100 MB
+    medium: 1000000000  # 1 GB
+    # Anything larger than 'medium' is considered 'large'
