@@ -1,0 +1,14 @@
+yeast:
+  organism: "Saccharomyces cerevisiae"
+  build: "R64-1-1"
+  transcripts_fa: "references/yeast/transcripts.fa.gz"
+  annotation_gtf: "references/yeast/annotation.gtf.gz"
+  decoy_fasta: "references/yeast/decoys.fa.gz"
+  salmon_index: "references/yeast/salmon_index"
+human:
+  organism: "Homo sapiens"
+  build: "GRCh38"
+  transcripts_fa: "references/human/transcripts.fa.gz"
+  annotation_gtf: "references/human/annotation.gtf.gz"
+  decoy_fasta: null
+  salmon_index: "references/human/salmon_index"

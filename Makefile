@@ -1,78 +1,30 @@
-PYTHON ?= python3
+.PHONY: help pipeline-run pipeline-lint pipeline-smoke
 
-.PHONY: help
-help:
-	@echo "Available targets:"
-	@grep -E '^[a-zA-Z_-]+:.*?##' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-15s %s\n", $$1, $$2}'
+help: ## Show this help
+	@echo "Makefile for the RNASEQ-MINI Platform"
+	@echo ""
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo ""
+	@echo "Pipeline commands are delegated to the core pipeline."
+	@echo "Run 'cd pipeline-core && make help' to see all available pipeline targets."
 
-.PHONY: install
-install: ## install the package and development dependencies
-	poetry install --all-extras
+pipeline-run: ## Run the core analysis pipeline
+	@echo "--> Executing pipeline in pipeline-core/..."
+	@$(MAKE) -C pipeline-core run
 
-.PHONY: lint
-lint: ## ruff + black --check + mypy
-	poetry run ruff check src tests tests/integration
-	poetry run black --check src tests tests/integration
-	poetry run mypy src
+pipeline-lint: ## Lint the core pipeline
+	@echo "--> Linting pipeline in pipeline-core/..."
+	@$(MAKE) -C pipeline-core lint
 
-.PHONY: mypy
-mypy: ## run mypy type checker
-	poetry run mypy src
+pipeline-smoke: ## Run the core pipeline smoke test
+	@echo "--> Running smoke test in pipeline-core/..."
+	@$(MAKE) -C pipeline-core smoke
 
-.PHONY: format
-format: ## apply ruff & black formatting
-	poetry run ruff check --fix src tests tests/integration
-	poetry run black src tests tests/integration
+web-app: ## Launch interactive web-based analysis environment
+	@conda run -n rnaseq-mini-core python web_app/app.py
 
-.PHONY: unit
-unit: ## run unit tests
-	poetry run pytest -q
-
-.PHONY: integration
-integration: ## run integration tests across all workflows
-	poetry run pytest tests/integration/ -v --tb=short
-
-.PHONY: test
-test: unit integration ## run all tests (unit + integration)
-
-.PHONY: smoke
-smoke: ## end-to-end toy run
-	poetry run clinical-ml run --config configs/params.yaml
-
-.PHONY: report
-report: ## regenerate HTML report
-	poetry run clinical-ml report --config configs/params.yaml --out results/report.html
-
-.PHONY: test-quality
-test-quality: ## run comprehensive quality assurance tests
-	@echo "🔬 Generating synthetic test data..."
-	poetry run clinical-ml data synthetic-data --scenario icu --n-samples 1000 --random-state 42 --output-dir tests/data
-	@echo "🧪 Running performance regression tests..."
-	poetry run clinical-ml testing performance-regression --config configs/params.yaml --tolerance 0.02
-	@echo "🔍 Checking CV integrity..."
-	poetry run clinical-ml testing cv-integrity --config configs/params.yaml --cv-folds 3
-	@echo "🏆 Running benchmark suite..."
-	poetry run clinical-ml testing benchmark --config configs/params.yaml
-	@echo "✅ Quality assurance tests completed!"
-
-.PHONY: test-synthetic
-test-synthetic: ## generate synthetic datasets for testing
-	poetry run clinical-ml data synthetic-data --scenario icu --n-samples 500 --random-state 42
-	poetry run clinical-ml data synthetic-data --scenario cancer --n-samples 500 --random-state 42
-	poetry run clinical-ml data synthetic-data --scenario cardiovascular --n-samples 500 --random-state 42
-
-.PHONY: test-regression
-test-regression: ## run performance regression tests
-	poetry run clinical-ml testing performance-regression --config configs/params.yaml --tolerance 0.05
-
-.PHONY: test-cv-integrity
-test-cv-integrity: ## check cross-validation integrity
-	poetry run clinical-ml testing cv-integrity --config configs/params.yaml
-
-.PHONY: test-benchmark
-test-benchmark: ## run benchmark suite
-	poetry run clinical-ml testing benchmark --config configs/params.yaml
-
-.PHONY: docs
-docs: ## build sphinx documentation
-	poetry run sphinx-build docs docs/_build/html
+api-server: ## Start the REST API server
+	@conda run -n rnaseq-mini-core python api/server.py
