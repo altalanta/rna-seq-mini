@@ -1,0 +1,87 @@
+# Advanced and optional features
+
+# Caching for faster re-runs
+cache:
+  enabled: true
+  dir: ".cache"
+  max_age_days: 30
+
+# Single-cell analysis settings
+singlecell:
+  enabled: false
+  # Path to the directory containing the 10x formatted matrix, barcodes, and features files.
+  input_dir: "path/to/your/10x_data"
+  
+  # Analysis parameters for the Scanpy workflow
+  analysis:
+    min_genes_per_cell: 200
+    min_cells_per_gene: 3
+    max_mito_percent: 15.0
+    n_pcs: 30
+    n_neighbors: 15
+    clustering_resolution: 0.5
+
+  # Automated cell type annotation with CellTypist
+  annotation:
+    enabled: true
+    # Name of a pre-trained CellTypist model.
+    model: "Immune_All_Low.pkl"
+
+  # Output paths
+  paths:
+    output_dir: "results/singlecell/analysis"
+
+
+# Dynamic resource optimization
+optimization:
+  enabled: false              # Enable dynamic resource optimization
+  auto_estimate: true         # Automatically estimate resources from samples.tsv
+  adaptive_scaling: true      # Enable adaptive scaling during execution
+
+  # Resource estimation parameters
+  estimation:
+    base_cores: 4
+    base_memory_gb: 16
+    complexity_multiplier: 1.5
+    size_multiplier: 1.2
+    min_cores: 1
+    max_cores: 32
+    min_memory_gb: 4
+    max_memory_gb: 128
+
+  # Cloud optimization
+  cloud:
+    enabled: false
+    provider: "aws"           # aws, gcp, azure
+    region: "us-east-1"
+
+    # Auto-scaling configuration
+    autoscaling:
+      enabled: true
+      min_vcpus: 0
+      max_vcpus: 256
+      scale_up_threshold: 0.8   # Scale up when >80% utilization
+      scale_down_threshold: 0.3  # Scale down when <30% utilization
+      scale_up_factor: 1.5
+      scale_down_factor: 0.7
+      cooldown_minutes: 5
+
+    # Cost monitoring
+    cost_monitoring:
+      enabled: true
+      budget_alert_threshold: 0.8  # Alert when 80% of budget reached
+      report_frequency_days: 7
+
+# Error handling and troubleshooting
+error_handling:
+  enabled: true              # Enable intelligent error handling
+  auto_retry: true           # Automatically retry failed operations
+  max_retries: 3            # Maximum retry attempts
+  retry_delay: 30           # Delay between retries (seconds)
+  solution_timeout: 300     # Timeout for solution execution (seconds)
+
+troubleshooting:
+  health_check_interval: 30  # Health check interval (seconds)
+  auto_fix_enabled: true     # Enable automatic fixes
+  diagnostic_level: "comprehensive"  # basic, standard, comprehensive
+  report_format: "markdown"  # markdown, html, json

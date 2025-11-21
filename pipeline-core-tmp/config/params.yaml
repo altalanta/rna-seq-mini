@@ -1,0 +1,14 @@
+# Main configuration file for the rnaseq-mini pipeline.
+# This file imports modularized configurations.
+
+# Core pipeline settings (inputs, outputs, metadata)
+pipeline: !include pipeline.yaml
+
+# Tool-specific parameters
+tools: !include tools.yaml
+
+# Execution environment (threads, memory, containers)
+execution: !include execution.yaml
+
+# Advanced features (caching, single-cell, optimization)
+advanced: !include advanced.yaml

@@ -1,0 +1,69 @@
+version: 1
+disable_existing_loggers: false
+
+formatters:
+  # Formatter for development: colorful, human-readable console output
+  console:
+    "()": structlog.dev.ConsoleRenderer
+    colors: true
+  
+  # Formatter for production: structured JSON logs
+  json:
+    "()": structlog.processors.JSONRenderer
+    # To include standard library log records in the output:
+    # "()": structlog.stdlib.render_to_log_kwargs
+
+processors:
+  # This processor is used for both console and json logs
+  shared:
+    - structlog.contextvars.merge_contextvars
+    - structlog.stdlib.add_logger_name
+    - structlog.stdlib.add_log_level
+    - structlog.processors.TimeStamper(fmt="iso")
+  
+  # Processors for development console logging
+  console:
+    - structlog.stdlib.PositionalArgumentsFormatter()
+    - structlog.processors.StackInfoRenderer()
+    - structlog.processors.format_exc_info
+    - structlog.dev.ConsoleRenderer()
+
+  # Processors for production JSON logging
+  json:
+    - structlog.processors.dict_tracebacks
+    - structlog.processors.JSONRenderer()
+
+handlers:
+  # Handler for development: outputs to the console
+  console:
+    class: logging.StreamHandler
+    formatter: console
+    level: INFO
+
+  # Handler for production: outputs to a file (or stdout for containers)
+  # For this example, we'll still use a StreamHandler for simplicity in Docker.
+  json:
+    class: logging.StreamHandler
+    formatter: json
+    level: INFO
+
+loggers:
+  # Define loggers for specific parts of the application
+  # You can set different levels for different modules
+  rnaseq_mini:
+    handlers: [console]
+    level: INFO
+    propagate: no
+  
+  api:
+    handlers: [console]
+    level: INFO
+    propagate: no
+
+root:
+  handlers: [console]
+  level: INFO
+
+
+
+

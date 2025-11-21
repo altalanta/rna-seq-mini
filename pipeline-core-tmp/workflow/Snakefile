@@ -1,0 +1,169 @@
+from __future__ import annotations
+
+import csv
+from pathlib import Path
+
+# Run configuration validation as the first step
+import subprocess
+import sys
+
+try:
+    # Use the new validation script, assuming it's in a sibling `scripts` dir
+    subprocess.run(["python", "../scripts/validate_config.py"], check=True)
+except (subprocess.CalledProcessError, FileNotFoundError):
+    sys.exit(1) # Exit if validation fails or script not found
+
+from .utils.functions import (
+    ensure_directory,
+    get_yaml_loader,
+    read_contrasts,
+    read_samples,
+    sample_is_single_end,
+)
+import yaml
+import copy
+
+# from .utils.schema import validate_config # No longer needed
+
+# Import caching system
+try:
+    from cache_manager import get_cache_manager, should_skip_stage, mark_stage_complete
+    CACHE_ENABLED = config.get("cache", {}).get("enabled", True)
+    CACHE_DIR = config.get("cache", {}).get("dir", ".cache")
+    cache_manager = get_cache_manager(CACHE_DIR, CACHE_ENABLED)
+except ImportError:
+    # Fallback if cache_manager not available
+    CACHE_ENABLED = False
+    cache_manager = None
+
+with open("../config/params.yaml") as f:
+    config = yaml.load(f, Loader=get_yaml_loader())
+
+# Create a deep copy of the config to avoid modification issues
+config = copy.deepcopy(config)
+
+# Load genome configurations
+with open("../config/genome.yaml") as f:
+    genome_config = yaml.safe_load(f)
+
+# Select the active organism's paths
+organism = config["pipeline"]["organism"]
+if organism not in genome_config:
+    raise ValueError(f"Organism '{organism}' not found in ../config/genome.yaml")
+REFERENCE_CONFIG = genome_config[organism]
+
+# --- Dynamic Resource Allocation ---
+
+import json
+
+def get_all_resource_profiles(sample_sheet_path: str, config_path: str = "../config/params.yaml") -> dict:
+    """
+    Calls the estimation script once to get profiles for all samples.
+    """
+    try:
+        result = subprocess.check_output(
+            ["python", "../scripts/estimate_resources.py", sample_sheet_path, "--config", config_path],
+            text=True
+        )
+        return json.loads(result)
+    except (subprocess.CalledProcessError, FileNotFoundError, json.JSONDecodeError):
+        # Fallback to a default if the script fails
+        return {}
+
+RESOURCE_PROFILES = get_all_resource_profiles(config["pipeline"]["paths"]["samples"])
+
+def get_resources(wildcards, rule_name: str, resource_type: str):
+    """
+    Looks up the requested resource (threads or mem_gb) for a given rule and profile.
+    """
+    # For rules that run per sample, we can determine the profile from the pre-computed dict
+    sample_id = getattr(wildcards, "sample", None)
+    if sample_id and sample_id in RESOURCE_PROFILES:
+        profile = RESOURCE_PROFILES[sample_id]
+    else:
+        # For rules that don't operate on a single sample, use a default
+        profile = "medium"
+    
+    # Get the resource value from the config, falling back to the default
+    default_resources = config["execution"]["resource_profiles"]["default"]
+    value = config["execution"]["resource_profiles"].get(rule_name, {}).get(profile, {}).get(resource_type)
+    
+    if value:
+        return value
+    else:
+        # Fallback to default if the specific profile/rule is not defined
+        return default_resources[resource_type]
+
+
+# validate_config(config) # No longer needed, handled by script call above
+
+PROJECT_DIR = Path.cwd()
+LOG_DIR = Path(config["pipeline"]["paths"]["logs"])
+ensure_directory(LOG_DIR)
+
+samples = read_samples(config["pipeline"]["paths"]["samples"])
+SAMPLES = [row["sample"] for row in samples]
+SAMPLE_LOOKUP = {row["sample"]: row for row in samples}
+
+FASTQ_LOOKUP = {}
+for sample in SAMPLES:
+    row = SAMPLE_LOOKUP[sample]
+    fastqs = {"R1": row.get("fastq_1")}
+    if row.get("fastq_2"):
+        fastqs["R2"] = row.get("fastq_2")
+    FASTQ_LOOKUP[sample] = fastqs
+
+
+contrasts = read_contrasts(config["tools"]["r"]["contrasts_file"])
+CONTRAST_LABELS = [f"{a}_vs_{b}" for a, b in contrasts]
+
+# Allow overriding the results directory from the command line, e.g., for smoke tests
+RESULTS_DIR = Path(config.get("results_dir", config["pipeline"]["paths"]["outdir"]))
+
+QC_DIR = RESULTS_DIR / "qc"
+SALMON_DIR = RESULTS_DIR / "salmon"
+COUNTS_DIR = RESULTS_DIR / "counts"
+DE_DIR = RESULTS_DIR / "de"
+FGSEA_DIR = RESULTS_DIR / "fgsea"
+SALMON_INDEX_DIR = Path(REFERENCE_CONFIG["salmon_index"])
+TX2GENE = SALMON_INDEX_DIR / "tx2gene.tsv"
+DE_TABLE_PATHS = [DE_DIR / f"DE_{label}.tsv" for label in CONTRAST_LABELS]
+FGSEA_TABLE_PATHS = [FGSEA_DIR / f"fgsea_{label}.tsv" for label in CONTRAST_LABELS]
+DE_FIG_DIR = DE_DIR / "figures"
+FGSEA_FIG_DIR = FGSEA_DIR / "figures"
+REPORT_HTML = RESULTS_DIR / "report.html"
+
+for path in [RESULTS_DIR, QC_DIR, SALMON_DIR, COUNTS_DIR, DE_DIR, FGSEA_DIR, LOG_DIR]:
+    ensure_directory(path)
+
+QC_FASTQC_DIR = QC_DIR / "fastqc"
+QC_MULTIQC_DIR = QC_DIR / "multiqc"
+ensure_directory(QC_FASTQC_DIR)
+ensure_directory(QC_MULTIQC_DIR)
+
+ensure_directory(DE_FIG_DIR)
+ensure_directory(FGSEA_FIG_DIR)
+
+ensure_directory(LOG_DIR / "slurm")
+
+SEQUENCING_MODE = "single" if sample_is_single_end(config["pipeline"]) else "paired"
+
+include: "rules/qc.smk"
+include: "rules/salmon.smk"
+include: "rules/tximport_de.smk"
+include: "rules/singlecell.smk"
+include: "rules/report.smk"
+
+rule all:
+    input:
+        REPORT_HTML,
+        expand(QC_DIR / "fastqc" / "{sample}_{read}_fastqc.zip", sample=SAMPLES, read=["R1", "R2"] if SEQUENCING_MODE == "paired" else ["R1"]),
+        QC_DIR / "multiqc" / "multiqc_report.html",
+        expand(SALMON_DIR / "{sample}" / "quant.sf", sample=SAMPLES),
+        COUNTS_DIR / "counts.tsv",
+        COUNTS_DIR / "tpm.tsv",
+        DE_DIR / "de_summary.tsv",
+        expand(DE_DIR / "DE_{label}.tsv", label=CONTRAST_LABELS),
+        FGSEA_DIR / "fgsea_summary.tsv",
+        # Conditionally include single-cell output
+        SINGLECELL_OUTPUT_DIR / ".singlecell_complete" if config.get("advanced", {}).get("singlecell", {}).get("enabled", False) else []
