@@ -8,26 +8,24 @@ The core bioinformatics pipeline is developed and maintained as a separate compo
 
 ### 1. Setup the Environment
 
-Ensure you have Conda/Mamba installed. Then, set up the necessary environments by running the setup command from the core pipeline:
+Ensure you have Conda/Mamba installed. Then, set up the necessary environments by running the unified setup command from the project root:
 
 ```bash
-cd pipeline-core
-make setup
-cd ..
+make pipeline-setup
 ```
 
 ### 2. Run the Analysis Pipeline
 
-To run the bioinformatics pipeline, use the top-level `make` command, which delegates to the pipeline's internal `Makefile`:
+To run the bioinformatics pipeline, use the top-level `make` command:
 
 ```bash
 make pipeline-run
 ```
 
-All pipeline-related commands are prefixed with `pipeline-`. For a full list of pipeline commands, run:
+All pipeline-related commands are prefixed with `pipeline-`. For a full list of available commands, run:
 
 ```bash
-cd pipeline-core && make help
+make help
 ```
 
 ### 3. Launch the Platform
@@ -36,12 +34,12 @@ The platform provides a web application and an API to interact with the pipeline
 
 **Launch the Web App:**
 ```bash
-make web-app
+make platform-serve-webapp
 ```
 
 **Launch the API Server:**
 ```bash
-make api-server
+make platform-serve-api
 ```
 
 ## 🏗️ Architecture

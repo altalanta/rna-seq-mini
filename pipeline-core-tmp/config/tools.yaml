@@ -1,0 +1,29 @@
+# Tool-specific parameters
+fastqc:
+  extra: ""
+
+multiqc:
+  title: "RNA-seq QC"
+
+salmon:
+  libtype: "A"
+  extra: "--validateMappings --gcBias"
+  threads: 4
+
+r:
+  design: "~ condition + batch"
+  contrast_variable: "condition"
+  batch_column: "batch"
+  alpha: 0.05
+  lfc_shrink: true
+  contrasts_file: "config/contrasts.tsv"
+  gene_id_column: "gene_id"
+  pvalue_adjust: "BH"
+
+fgsea:
+  genesets: null
+  min_size: 1
+  max_size: 200
+  nperm: 1000
+  padj_cutoff: 0.1
+  score_column: "log2FoldChange"

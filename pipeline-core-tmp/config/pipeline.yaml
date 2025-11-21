@@ -1,0 +1,30 @@
+project: "rnaseq-mini"
+se: false                   # single-end reads if true
+organism: "yeast"
+
+# Automated reference management
+# See config/genome.yaml for species-specific paths.
+references:
+  auto_download: true
+  # The `species` key should match one of the presets in `scripts/download_references.py`
+  # (e.g., "yeast", "human", "mouse").
+  species: "yeast"
+
+# Report metadata
+report:
+  author: "Your Name"
+  title: "RNA-seq Analysis Report"
+  output_html: "results/report.html"
+
+# Input/output directories
+fastq_dir: "tests/data/fastq/"
+paths:
+  samples: "config/samples.tsv"
+  outdir: "results"
+  logs: "logs"
+  qc: "results/qc"
+  salmon: "results/salmon"
+  counts: "results/counts"
+  de: "results/de"
+  fgsea: "results/fgsea"
+  report_dir: "results"

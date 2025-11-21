@@ -1,0 +1,44 @@
+name: rnaseq-mini-core
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core Python tools
+  - python=3.11
+  - snakemake>=7
+  - nextflow>=24
+  - mamba
+  - pip
+  - ruff
+  - black
+  - yamllint
+  - pandas
+  - pyyaml
+  - pydantic
+  - structlog
+  - rich
+  - click
+  - pytest
+  - pre-commit
+  - schema
+
+  # QC tools
+  - fastqc
+  - multiqc
+  - pigz
+
+  # Quantification tools
+  - salmon>=1.10
+  - samtools
+  - seqkit
+
+  # Utility tools
+  - git
+  - wget
+  - curl
+  - unzip
+
+  # Pip dependencies
+  - pip:
+      - snakemake-executor-plugin-slurm
