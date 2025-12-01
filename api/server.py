@@ -7,6 +7,7 @@ Provides comprehensive programmatic access to RNA-seq analysis capabilities.
 import json
 import asyncio
 import logging
+import os
 import traceback
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Union
@@ -14,10 +15,7 @@ from datetime import datetime
 import uuid
 import subprocess
 import yaml
-import sys
 
-# Add src to the Python path to allow importing the logger module
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 from rnaseq_mini.logger import get_logger
 
 from sqlalchemy.orm import Session
@@ -47,6 +45,14 @@ log = get_logger("api")
 
 # Initialize DB
 db.init_db()
+
+# --- CORS Configuration ---
+# Configure allowed origins from environment variable (comma-separated)
+# Default allows localhost for development; override in production
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:8080").split(",")
+CORS_ALLOW_CREDENTIALS = os.getenv("CORS_ALLOW_CREDENTIALS", "true").lower() == "true"
+CORS_METHODS = os.getenv("CORS_METHODS", "GET,POST,PUT,DELETE,OPTIONS").split(",")
+CORS_HEADERS = os.getenv("CORS_HEADERS", "Authorization,Content-Type,X-Requested-With").split(",")
 
 # --- Data Loading & Caching ---
 
@@ -90,13 +96,14 @@ class RNASEQMiniAPI:
             openapi_url="/openapi.json"
         )
 
-        # Add CORS middleware
+        # Add CORS middleware with configurable origins
+        # Set CORS_ORIGINS env var for production (e.g., "https://app.example.com")
         self.app.add_middleware(
             CORSMiddleware,
-            allow_origins=["*"],
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_origins=CORS_ORIGINS,
+            allow_credentials=CORS_ALLOW_CREDENTIALS,
+            allow_methods=CORS_METHODS,
+            allow_headers=CORS_HEADERS,
         )
 
         # Initialize components
