@@ -5,10 +5,6 @@ from pathlib import Path
 import yaml
 from datetime import datetime
 
-# Add src to the Python path to allow importing modules
-import sys
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-
 from rnaseq_mini.logger import get_logger
 from .celery_app import celery_app
 from .db import SessionLocal, Job
