@@ -11,8 +11,6 @@ from pathlib import Path
 import click
 import yaml
 
-# Add src to the Python path to allow importing modules
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
 from rnaseq_mini.logger import get_logger
 from scripts import cache_manager
 
