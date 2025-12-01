@@ -560,8 +560,8 @@ def main():
         diagnostic_tools = DiagnosticTools()
         results = diagnostic_tools.run_diagnostics(args.diagnostics)
 
-        print("
-🔍 Diagnostic Results:"        for category, result in results.items():
+        print("\n🔍 Diagnostic Results:")
+        for category, result in results.items():
             status = "✅ PASS" if result["overall_success"] else "❌ FAIL"
             print(f"   {category}: {status}")
             for cmd_result in result["commands"]:
@@ -591,16 +591,16 @@ def main():
         report_file = reporter.generate_report(classified_error)
 
         # Print summary
-        print("
-🚨 Error Analysis:"        print(f"   Category: {classified_error.category.value}")
+        print("\n🚨 Error Analysis:")
+        print(f"   Category: {classified_error.category.value}")
         print(f"   Severity: {classified_error.severity.value}")
         print(f"   Root Cause: {classified_error.root_cause}")
         print(f"   Can Retry: {classified_error.can_retry}")
         print(f"   Solutions: {len(classified_error.solutions)}")
 
         if classified_error.solutions:
-            print("
-💡 Recommended Solutions:"            for i, solution in enumerate(classified_error.solutions[:3], 1):
+            print("\n💡 Recommended Solutions:")
+            for i, solution in enumerate(classified_error.solutions[:3], 1):
                 print(f"   {i}. {solution.title} (Priority: {solution.priority})")
                 print(f"      {solution.description}")
 
