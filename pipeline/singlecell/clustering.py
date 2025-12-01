@@ -5,6 +5,7 @@ Provides comprehensive clustering analysis for single-cell RNA-seq data.
 """
 
 import os
+import json
 import logging
 import subprocess
 from pathlib import Path
