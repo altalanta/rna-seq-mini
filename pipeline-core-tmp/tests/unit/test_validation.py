@@ -3,10 +3,6 @@ import json
 import yaml
 from pathlib import Path
 
-# Adjust the path to import from the src directory
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / 'src'))
-
 from rnaseq_mini.validation import validate_config_against_schema, check_paths
 
 @pytest.fixture

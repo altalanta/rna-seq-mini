@@ -8,9 +8,6 @@ import sys
 from pathlib import Path
 from pydantic import ValidationError
 
-# Add src to the Python path to allow importing the validation module
-sys.path.append(str(Path(__file__).resolve().parent.parent / "src"))
-
 from rnaseq_mini.validation import load_and_validate_config
 
 def main():
