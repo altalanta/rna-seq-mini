@@ -12,20 +12,19 @@ from pathlib import Path
 from jsonschema import validate, exceptions
 from typing import List, Optional
 
-from pydantic import BaseModel, Field, FilePath, DirectoryPath, field_validator
+from pydantic import BaseModel, ConfigDict, Field, FilePath, DirectoryPath, field_validator
 import pandas as pd
 
 # --- Helper Validators ---
 
 class SamplesTsv(BaseModel):
+    """Validates rows from samples.tsv file."""
+    model_config = ConfigDict(extra='allow')  # Allow extra columns like 'batch'
+    
     sample: str
     fastq_1: FilePath
     fastq_2: Optional[FilePath] = None
     condition: str
-    
-    # Allow extra columns like 'batch'
-    class Config:
-        extra = 'allow'
 
 class ContrastsTsv(BaseModel):
     contrast_a: str
@@ -103,15 +102,15 @@ def load_and_validate_config(config_path: Path) -> FullConfig:
     # 1. Load and validate params.yaml
     with open(config_path) as f:
         config_dict = yaml.safe_load(f)
-    config = FullConfig.parse_obj(config_dict)
+    config = FullConfig.model_validate(config_dict)
 
     # 2. Load and validate samples.tsv
     samples_df = pd.read_csv(config.paths.samples, sep='	')
-    samples_data = [SamplesTsv.parse_obj(row) for _, row in samples_df.iterrows()]
+    samples_data = [SamplesTsv.model_validate(row.to_dict()) for _, row in samples_df.iterrows()]
 
     # 3. Load and validate contrasts.tsv
     contrasts_df = pd.read_csv(config.r.contrasts_file, sep='	', header=None, names=['contrast_a', 'contrast_b'])
-    contrasts_data = [ContrastsTsv.parse_obj(row) for _, row in contrasts_df.iterrows()]
+    contrasts_data = [ContrastsTsv.model_validate(row.to_dict()) for _, row in contrasts_df.iterrows()]
     
     # 4. Perform cross-validation
     sample_conditions = {row.condition for row in samples_data}
