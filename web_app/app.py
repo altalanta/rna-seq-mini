@@ -13,6 +13,7 @@ from fastapi.middleware.wsgi import WSGIMiddleware
 from fastapi.templating import Jinja2Templates
 import uvicorn
 from api.server import RNASEQMiniAPI
+from api.db import SessionLocal, Job
 
 # Import the dashboard creation function
 from web_app.dashboard import create_dashboard
@@ -41,16 +42,28 @@ templates = Jinja2Templates(directory=str(templates_dir))
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
     """Serve the main landing page which lists available jobs."""
-    jobs = list(api.analysis_jobs.values())
+    db = SessionLocal()
+    try:
+        jobs = db.query(Job).order_by(Job.created_at.desc()).limit(50).all()
+    finally:
+        db.close()
     return templates.TemplateResponse("index.html", {"request": request, "jobs": jobs})
 
 @app.get("/dashboard/{job_id}", response_class=HTMLResponse)
 async def job_dashboard(request: Request, job_id: str):
     """Serve an interactive dashboard for a specific job ID."""
-    if job_id not in api.analysis_jobs:
+    from fastapi.responses import RedirectResponse
+    
+    db = SessionLocal()
+    try:
+        job = db.query(Job).filter(Job.id == job_id).first()
+    finally:
+        db.close()
+    
+    if not job:
         return HTMLResponse("Job not found.", status_code=404)
     
-    results_path = api.analysis_jobs[job_id].get("results_dir", "results")
+    results_path = job.results_dir or "results"
     
     # Create a new Dash app instance for this specific job
     dash_app_job = create_dashboard(app, results_dir_path=results_path)
@@ -61,7 +74,6 @@ async def job_dashboard(request: Request, job_id: str):
 
     # Redirect the user to the interactive dashboard
     # In a real application, you might render a template that includes the Dash app iframe
-    from fastapi.responses import RedirectResponse
     return RedirectResponse(url=mount_path)
 
 

@@ -73,7 +73,7 @@ def create_dashboard(server, results_dir_path="results"):
 
     summary_df, all_de_data = load_de_results(results_dir)
     multiqc_stats = load_multiqc_stats(results_dir)
-    # tpm_counts is now loaded on demand by get_job_data
+    tpm_counts = load_normalized_counts(results_dir)
     contrasts = list(all_de_data.keys())
     samples_map = load_samples_info(results_dir)
 
