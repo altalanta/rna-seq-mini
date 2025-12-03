@@ -1,5 +1,4 @@
-"
-""
+"""
 Single-cell and spatial transcriptomics framework for RNASEQ-MINI.
 Provides comprehensive support for scRNA-seq, scATAC-seq, and spatial transcriptomics analysis.
 """
