@@ -1,11 +1,15 @@
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Text
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+import os
+from sqlalchemy import create_engine, Column, String, DateTime, Text
+from sqlalchemy.orm import sessionmaker, declarative_base
 import datetime
 
-DATABASE_URL = "sqlite:///./api_jobs.db"
+# Database URL - configurable via environment variable
+# Supports SQLite (default), PostgreSQL, MySQL, etc.
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./api_jobs.db")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+# SQLite requires check_same_thread=False for FastAPI compatibility
+connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
