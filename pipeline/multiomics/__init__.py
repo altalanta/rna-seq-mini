@@ -4,16 +4,15 @@ Provides unified analysis across multiple omics data types.
 """
 
 from .omics_types import OmicsType, OmicsData
-from .integration import MultiOmicsIntegrator
 from .normalization import CrossOmicsNormalizer
-from .visualization import MultiOmicsVisualizer
-from .statistics import JointStatisticalTester
+
+# Note: The following modules are planned but not yet implemented:
+# - integration (MultiOmicsIntegrator)
+# - visualization (MultiOmicsVisualizer)  
+# - statistics (JointStatisticalTester)
 
 __all__ = [
     'OmicsType',
     'OmicsData',
-    'MultiOmicsIntegrator',
     'CrossOmicsNormalizer',
-    'MultiOmicsVisualizer',
-    'JointStatisticalTester'
 ]
