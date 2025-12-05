@@ -118,7 +118,7 @@ class ResourceEstimator:
                 return 0.5
 
             # Calculate GC content and sequence diversity
-            gc_content = np.mean([seq.count(('G', 'C')) / len(seq) for seq in sequences])
+            gc_content = np.mean([(seq.count('G') + seq.count('C')) / len(seq) for seq in sequences if len(seq) > 0])
 
             # Calculate sequence entropy (diversity measure)
             from collections import Counter
@@ -348,8 +348,8 @@ def main():
 
     # Print summary
     summary = estimates['project_summary']
-    print("
-📊 Resource Estimation Summary:"    print(f"   Samples: {summary['total_samples']}")
+    print("\n📊 Resource Estimation Summary:")
+    print(f"   Samples: {summary['total_samples']}")
     print(f"   Total cores needed: {summary['total_cores_needed']}")
     print(f"   Max memory: {summary['max_memory_gb']} GB")
     print(f"   Estimated runtime: {summary['estimated_runtime_minutes']} minutes")
@@ -365,8 +365,8 @@ def main():
         config = create_optimized_config(estimates)
 
     # Print sample-specific estimates
-    print("
-🔬 Sample Estimates:"    for sample_est in estimates['sample_estimates']:
+    print("\n🔬 Sample Estimates:")
+    for sample_est in estimates['sample_estimates']:
         print(f"   {sample_est['sample_id']}: {sample_est['cores']} cores, "
               f"{sample_est['memory_gb']} GB, {sample_est['runtime_minutes']} min "
               f"(complexity: {sample_est['complexity_score']:.2f})")
