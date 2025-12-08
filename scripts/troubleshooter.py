@@ -78,7 +78,7 @@ class ProactiveTroubleshooter:
                     capture_output=True, timeout=5
                 )
                 network_status = result.returncode == 0
-            except:
+            except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
                 network_status = False
 
             return SystemHealth(
@@ -125,7 +125,7 @@ class ProactiveTroubleshooter:
                                 completed_jobs += 1
                             if 'failed' in content.lower() or 'error' in content.lower():
                                 failed_jobs += 1
-                    except:
+                    except (OSError, IOError, PermissionError):
                         pass
 
             # Calculate running time
@@ -231,7 +231,7 @@ class ProactiveTroubleshooter:
                             if mtime < cutoff:
                                 file_path.unlink()
                                 logger.info(f"Removed old cache file: {file_path}")
-                        except:
+                        except (OSError, IOError, PermissionError):
                             pass
 
             logger.info("Disk space cleanup completed")
@@ -304,7 +304,7 @@ class ProactiveTroubleshooter:
                         logger.warning(f"Configuration issue detected: {result.stderr.decode()}")
                     else:
                         logger.info("Configuration check passed")
-                except:
+                except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
                     pass
 
             # Check for missing dependencies
@@ -320,7 +320,7 @@ class ProactiveTroubleshooter:
                     result = subprocess.run(check, shell=True, capture_output=True, timeout=10)
                     if result.returncode != 0:
                         missing_deps.append(check.split()[-1])
-                except:
+                except (subprocess.TimeoutExpired, subprocess.SubprocessError, OSError):
                     pass
 
             if missing_deps:

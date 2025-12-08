@@ -499,7 +499,7 @@ class QualityGate:
 
         # Check overall quality score
         if overall_score < self.min_quality_score:
-            return False, f"Overall quality score ({overall_score".2f"}) below threshold ({self.min_quality_score})"
+            return False, f"Overall quality score ({overall_score:.2f}) below threshold ({self.min_quality_score})"
 
         # Check for critical failures
         critical_failures = []
@@ -529,7 +529,7 @@ class QualityGate:
         overall_score = quality_report.get('overall_score', 0.0)
 
         if overall_score < publication_threshold:
-            return False, f"Publication quality threshold not met ({overall_score".2f"} < {publication_threshold})"
+            return False, f"Publication quality threshold not met ({overall_score:.2f} < {publication_threshold})"
 
         # Check for excellent quality in key areas
         section_scores = quality_report.get('section_scores', {})
@@ -595,7 +595,7 @@ def run_quality_assessment(results_dir: str = "results",
         json.dump(quality_report, f, indent=2)
 
     logger.info(f"Quality assessment complete. Report saved to: {output_file}")
-    logger.info(f"Overall quality score: {quality_report['overall_score']".2f"}")
+    logger.info(f"Overall quality score: {quality_report['overall_score']:.2f}")
     logger.info(f"Quality gate: {'PASSED' if gate_passed else 'FAILED'}")
     logger.info(f"Publication ready: {'YES' if publication_ready else 'NO'}")
 

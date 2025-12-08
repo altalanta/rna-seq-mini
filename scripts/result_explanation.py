@@ -512,7 +512,7 @@ class ResultExplainer:
         try:
             _, p_value = stats.shapiro(data.sample(min(5000, len(data))))
             return p_value > 0.05
-        except:
+        except (ValueError, TypeError, RuntimeError):
             return True  # Assume normal if test fails
 
     def _assess_power(self, n_significant: int, total_genes: int) -> str:
