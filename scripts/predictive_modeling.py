@@ -165,7 +165,7 @@ class PredictiveModeler:
         if y_proba is not None and len(np.unique(y)) > 1:
             try:
                 auc_roc = roc_auc_score(y, y_proba)
-            except:
+            except (ValueError, TypeError):
                 auc_roc = 0.0
 
         # Confusion matrix
