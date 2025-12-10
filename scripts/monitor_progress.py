@@ -242,7 +242,7 @@ class PipelineMonitor:
                 import pandas as pd
                 df = pd.read_csv(samples_file, sep='\t')
                 return len(df)
-        except:
+        except (OSError, IOError, PermissionError, ValueError):
             pass
         return 6  # Default for test data
 
@@ -254,7 +254,7 @@ class PipelineMonitor:
                 import pandas as pd
                 df = pd.read_csv(contrasts_file, sep='\t')
                 return len(df)
-        except:
+        except (OSError, IOError, PermissionError, ValueError):
             pass
         return 2  # Default for test data
 

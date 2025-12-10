@@ -247,7 +247,7 @@ class GeneNetworkAnalyzer:
                     try:
                         communities = nx.community.greedy_modularity_communities(G)
                         community_list = list(communities)
-                    except:
+                    except Exception:
                         # Fallback to connected components
                         community_list = list(nx.connected_components(G))
                 else:
@@ -590,10 +590,11 @@ def run_gene_network_analysis(results_dir: str = "results", output_format: str =
 
     # Show top interactions
     if interactions:
-        print("
-🔗 Top Gene Interactions:"        for i, interaction in enumerate(interactions[:5], 1):
+        print("\n🔗 Top Gene Interactions:")
+        for i, interaction in enumerate(interactions[:5], 1):
             direction_symbol = "→" if interaction.direction == "positive" else "←"
-            print(f"{i}. {interaction.gene1} {direction_symbol} {interaction.gene2} ({interaction.interaction_type}, strength: {interaction.strength".2f"})")
+            print(f"{i}. {interaction.gene1} {direction_symbol} {interaction.gene2} "
+                  f"({interaction.interaction_type}, strength: {interaction.strength:.2f})")
 
     # Create visualizations
     analyzer.visualize_network(modules, interactions)

@@ -105,7 +105,7 @@ class ResultExplainer:
         - Total genes analyzed: {de_summary['total_genes']}
         - Significantly differentially expressed: {de_summary['n_significant']} ({de_summary['percent_significant']})
         - Strong effect sizes (|LFC| > 1): {de_summary['strong_effects']}
-        - Median effect size: {de_summary['median_effect']".2f"} log2 fold change
+        - Median effect size: {de_summary['median_effect']:.2f} log2 fold change
 
         **Statistical Quality:**
         - Multiple testing correction: Benjamini-Hochberg (FDR)

@@ -65,7 +65,7 @@ class SetupWizard:
             result = subprocess.run(['git', 'config', 'user.name'],
                                   capture_output=True, text=True, cwd=self.project_root)
             return result.stdout.strip() if result.returncode == 0 else "Your Name"
-        except:
+        except (subprocess.SubprocessError, OSError):
             return "Your Name"
 
     def _print_header(self, title):
@@ -294,7 +294,7 @@ class SetupWizard:
                     break
                 else:
                     print(f"Please choose from: {', '.join([str(i) for i in range(1, len(organisms)+1)] + organisms)}")
-            except:
+            except (ValueError, TypeError):
                 print("Invalid choice. Please try again.")
 
         self.default_params["organism"] = organism

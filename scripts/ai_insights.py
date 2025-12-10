@@ -185,7 +185,7 @@ class AIInsightsEngine:
         insights.append(InsightResult(
             insight_type="effect_size_analysis",
             title=f"{strength.title()} Effect Sizes Detected",
-            description=f"Median absolute log2 fold change: {median_effect".2f"}. {len(sig_genes)} significant genes identified.",
+            description=f"Median absolute log2 fold change: {median_effect:.2f}. {len(sig_genes)} significant genes identified.",
             confidence=confidence,
             data={
                 "median_effect_size": median_effect,
@@ -240,7 +240,7 @@ class AIInsightsEngine:
                     insights.append(InsightResult(
                         insight_type="pathway_enrichment",
                         title=f"Significant Pathway Enrichment Detected",
-                        description=f"Found {len(sig_pathways)} significantly enriched pathways. Top pathway: {top_pathways.iloc[0]['pathway']} (NES: {top_pathways.iloc[0]['NES']".2f"})",
+                        description=f"Found {len(sig_pathways)} significantly enriched pathways. Top pathway: {top_pathways.iloc[0]['pathway']} (NES: {top_pathways.iloc[0]['NES']:.2f})",
                         confidence=0.85,
                         data={
                             "significant_pathways": len(sig_pathways),
