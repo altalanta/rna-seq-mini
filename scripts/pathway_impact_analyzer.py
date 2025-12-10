@@ -345,7 +345,7 @@ class PathwayImpactAnalyzer:
 
         # Generate interpretation
         interpretation = (
-            f"This pathway shows {impact_level} enrichment (NES: {nes".2f"}) with "
+            f"This pathway shows {impact_level} enrichment (NES: {nes:.2f}) with "
             f"{consistency} functional representation of differentially expressed genes. "
         )
 
@@ -440,10 +440,10 @@ def run_pathway_impact_analysis(results_dir: str = "results", output_format: str
 
     # Show top insights
     top_pathways = pathway_impacts[:5]
-    print("
-🏆 Top Pathways by Impact Score:"    for i, impact in enumerate(top_pathways, 1):
-        print(f"{i}. {impact.pathway_name} (Impact: {impact.impact_score".3f"})")
-        print(f"   NES: {impact.enrichment_score".2f"}, Confidence: {impact.confidence_score".1%"}")
+    print("\n🏆 Top Pathways by Impact Score:")
+    for i, impact in enumerate(top_pathways, 1):
+        print(f"{i}. {impact.pathway_name} (Impact: {impact.impact_score:.3f})")
+        print(f"   NES: {impact.enrichment_score:.2f}, Confidence: {impact.confidence_score:.1%}")
 
     # Export results
     if output_format in ["json", "both"]:
