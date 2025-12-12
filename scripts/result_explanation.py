@@ -390,15 +390,28 @@ class ResultExplainer:
 
         sig_genes = self.de_results[self.de_results['padj'] < 0.05]
         strong_effects = sig_genes[abs(sig_genes['log2FoldChange']) > 1]
+        total_genes = len(self.de_results)
+        if total_genes == 0:
+            return {
+                "error": "No genes available in DE results",
+                "total_genes": 0,
+                "n_significant": 0,
+                "percent_significant": "0.0%",
+                "strong_effects": 0,
+                "median_effect": 0.0,
+                "effect_distribution": "unknown",
+                "power_assessment": "insufficient data",
+                "batch_effects": "insufficient data"
+            }
 
         return {
-            "total_genes": len(self.de_results),
+            "total_genes": total_genes,
             "n_significant": len(sig_genes),
-            "percent_significant": f"{len(sig_genes) / len(self.de_results) * 100".1f"}%",
+            "percent_significant": f"{len(sig_genes) / total_genes * 100:.1f}%",
             "strong_effects": len(strong_effects),
             "median_effect": sig_genes['log2FoldChange'].abs().median(),
             "effect_distribution": "normal" if self._check_normal_distribution(sig_genes['log2FoldChange']) else "skewed",
-            "power_assessment": self._assess_power(len(sig_genes), len(self.de_results)),
+            "power_assessment": self._assess_power(len(sig_genes), total_genes),
             "batch_effects": self._assess_batch_effects()
         }
 

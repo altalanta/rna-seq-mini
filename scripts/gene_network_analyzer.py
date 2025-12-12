@@ -582,9 +582,9 @@ def run_gene_network_analysis(results_dir: str = "results", output_format: str =
 
     # Show top modules
     if modules:
-        print("
-🏆 Top Network Modules:"        for i, module in enumerate(modules[:3], 1):
-            print(f"{i}. {module.module_id}: {len(module.genes)} genes (score: {module.module_score".3f"})")
+        print("\n🏆 Top Network Modules:")
+        for i, module in enumerate(modules[:3], 1):
+            print(f"{i}. {module.module_id}: {len(module.genes)} genes (score: {module.module_score:.3f})")
             if module.hub_genes:
                 print(f"   Hub genes: {', '.join(module.hub_genes[:3])}")
 

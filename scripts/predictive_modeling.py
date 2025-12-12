@@ -146,7 +146,7 @@ class PredictiveModeler:
             print("❌ No models could be trained")
             return None
 
-        print(f"✅ Best model: {best_model_name} (accuracy: {best_score".3f"})")
+        print(f"✅ Best model: {best_model_name} (accuracy: {best_score:.3f})")
 
         # Train final model and get feature importance
         best_model.fit(X, y)
@@ -558,8 +558,8 @@ def run_predictive_analysis(results_dir: str = "results", output_format: str = "
 
     if model:
         print("✅ Predictive model trained:"        print(f"   Model: {model.model_type}")
-        print(f"   Accuracy: {model.accuracy".3f"}")
-        print(f"   AUC-ROC: {model.auc_roc".3f"}")
+        print(f"   Accuracy: {model.accuracy:.3f}")
+        print(f"   AUC-ROC: {model.auc_roc:.3f}")
         print(f"   Top biomarkers: {', '.join(model.top_biomarkers[:5])}")
 
     # Run biomarker discovery
@@ -571,7 +571,7 @@ def run_predictive_analysis(results_dir: str = "results", output_format: str = "
         # Show top biomarkers
         print("
 🏆 Top Biomarker Candidates:"        for i, biomarker in enumerate(biomarkers[:5], 1):
-            print(f"{i}. {biomarker.gene_id} (score: {biomarker.biomarker_score".3f"})")
+            print(f"{i}. {biomarker.gene_id} (score: {biomarker.biomarker_score:.3f})")
             print(f"   Pattern: {biomarker.expression_pattern}")
             print(f"   Recommendation: {biomarker.validation_recommendation}")
 

@@ -455,7 +455,10 @@ def run_pathway_impact_analysis(results_dir: str = "results", output_format: str
         print(f"📄 Exported TSV results to: {tsv_file}")
 
     # Generate summary
-    summary = f"Analyzed {len(pathway_impacts)} pathways with impact scores ranging from {pathway_impacts[-1].impact_score".3f"} to {pathway_impacts[0].impact_score".3f"}."
+    summary = (
+        f"Analyzed {len(pathway_impacts)} pathways with impact scores ranging from "
+        f"{pathway_impacts[-1].impact_score:.3f} to {pathway_impacts[0].impact_score:.3f}."
+    )
 
     return summary
 
