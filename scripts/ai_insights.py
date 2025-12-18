@@ -15,7 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
 import warnings
-import logging
+from rnaseq_mini.logger import get_logger
 from dataclasses import dataclass, asdict
 import pickle
 import joblib
@@ -72,8 +72,7 @@ class AIInsightsEngine:
         self.models_dir.mkdir(exist_ok=True)
 
         # Initialize logging
-        logging.basicConfig(level=logging.INFO)
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
 
         # Load pre-trained models if available
         self.models = {}

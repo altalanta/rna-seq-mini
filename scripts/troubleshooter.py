@@ -20,9 +20,9 @@ from dataclasses import dataclass, field
 # Import error handling components
 from error_handler import DiagnosticTools, ErrorReporter, ErrorRecovery
 
-# Setup logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-logger = logging.getLogger(__name__)
+# Setup logging using centralized configuration
+from rnaseq_mini.logger import get_logger
+logger = get_logger(__name__)
 
 @dataclass
 class SystemHealth:
